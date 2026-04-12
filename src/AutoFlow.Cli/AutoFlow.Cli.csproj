@@ -23,5 +23,6 @@
     <ProjectReference Include="..\..\libraries\AutoFlow.Library.Files\AutoFlow.Library.Files.csproj" />
     <ProjectReference Include="..\..\libraries\AutoFlow.Library.Http\AutoFlow.Library.Http.csproj" />
     <ProjectReference Include="..\..\libraries\AutoFlow.Library.Browser\AutoFlow.Library.Browser.csproj" />
+    <ProjectReference Include="..\AutoFlow.Database\AutoFlow.Database.csproj" />
   </ItemGroup>
 </Project>

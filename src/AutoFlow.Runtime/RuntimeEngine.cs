@@ -107,6 +107,7 @@ public sealed class RuntimeEngine : IRuntimeEngine
         {
             runResult.FinishedAtUtc = DateTimeOffset.UtcNow;
             await _hookRunner.OnWorkflowEndAsync(workflowContext, runResult).ConfigureAwait(false);
+            await _hookRunner.OnAfterWorkflowEndAsync(workflowContext, runResult).ConfigureAwait(false);
         }
 
         return runResult;

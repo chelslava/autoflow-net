@@ -38,6 +38,15 @@ public interface IWorkflowLifecycleHook
     Task OnWorkflowEndAsync(WorkflowContext ctx, RunResult result) => Task.CompletedTask;
 
     /// <summary>
+    /// Вызывается после OnWorkflowEndAsync, когда все hooks завершились.
+    /// Используется для финальных действий (сохранение в БД, отправка уведомлений).
+    /// </summary>
+    /// <param name="ctx">Контекст workflow.</param>
+    /// <param name="result">Результат выполнения workflow.</param>
+    /// <returns>Task для асинхронного выполнения.</returns>
+    Task OnAfterWorkflowEndAsync(WorkflowContext ctx, RunResult result) => Task.CompletedTask;
+
+    /// <summary>
     /// Вызывается перед выполнением шага.
     /// </summary>
     /// <param name="ctx">Контекст шага.</param>

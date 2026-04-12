@@ -63,6 +63,22 @@ public sealed class WorkflowHookRunner
         }
     }
 
+    /// <summary>Вызывает OnAfterWorkflowEndAsync для всех hooks.</summary>
+    public async Task OnAfterWorkflowEndAsync(WorkflowContext ctx, RunResult result)
+    {
+        foreach (var hook in _hooks)
+        {
+            try
+            {
+                await hook.OnAfterWorkflowEndAsync(ctx, result).ConfigureAwait(false);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Ошибка в hook {HookType}.OnAfterWorkflowEndAsync", hook.GetType().Name);
+            }
+        }
+    }
+
     /// <summary>Вызывает OnStepStartAsync для всех hooks.</summary>
     public async Task OnStepStartAsync(StepContext ctx)
     {

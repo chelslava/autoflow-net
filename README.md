@@ -15,6 +15,7 @@
 - **Error Handling** — on_error/finally блоки на уровне task
 - **Reports** — JSON и HTML отчёты о выполнении с маскированием секретов
 - **Browser Automation** — Playwright-based браузерная автоматизация
+- **Database** — SQLite для хранения истории выполнений
 
 ## Установка
 
@@ -52,6 +53,48 @@ dotnet run --project src/AutoFlow.Cli -- run examples/flow.yaml --output report.
 
 ```bash
 dotnet run --project src/AutoFlow.Cli -- run examples/flow.yaml --run-id my-run-123
+```
+
+### История выполнений
+
+```bash
+# Показать последние 20 запусков
+dotnet run --project src/AutoFlow.Cli -- history
+
+# Фильтр по имени workflow
+dotnet run --project src/AutoFlow.Cli -- history --workflow demo_flow
+
+# Фильтр по статусу
+dotnet run --project src/AutoFlow.Cli -- history --status Failed
+
+# Ограничить количество
+dotnet run --project src/AutoFlow.Cli -- history --limit 10
+```
+
+### Детали выполнения
+
+```bash
+dotnet run --project src/AutoFlow.Cli -- show <run-id>
+```
+
+### Статистика
+
+```bash
+# Статистика за последние 30 дней
+dotnet run --project src/AutoFlow.Cli -- stats
+
+# Статистика по конкретному workflow
+dotnet run --project src/AutoFlow.Cli -- stats --workflow demo_flow
+
+# Статистика за 7 дней
+dotnet run --project src/AutoFlow.Cli -- stats --days 7
+```
+
+### Очистка истории
+
+```bash
+# Удалить записи старше 30 дней
+dotnet run --project src/AutoFlow.Cli -- clean --older-than 30
 ```
 
 ### Валидация workflow
@@ -319,15 +362,19 @@ AutoFlow.sln
 │   │   └── Secrets/              # Secret providers
 │   ├── AutoFlow.Validation/      # Валидация workflow
 │   ├── AutoFlow.Reporting/       # Генерация отчётов
+│   ├── AutoFlow.Database/        # SQLite persistence
 │   └── AutoFlow.Cli/             # Консольный интерфейс
 ├── libraries/
 │   ├── AutoFlow.Library.Assertions/  # log.info
 │   ├── AutoFlow.Library.Files/       # files.*
-│   └── AutoFlow.Library.Http/        # http.*, json.*
+│   ├── AutoFlow.Library.Http/        # http.*, json.*
+│   └── AutoFlow.Library.Browser/     # browser.*
 ├── tests/
 │   ├── AutoFlow.Parser.Tests/
 │   ├── AutoFlow.Runtime.Tests/
-│   └── AutoFlow.Validation.Tests/
+│   ├── AutoFlow.Validation.Tests/
+│   ├── AutoFlow.Reporting.Tests/
+│   └── AutoFlow.Database.Tests/
 ├── examples/
 │   ├── flow.yaml
 │   ├── advanced_flow.yaml
@@ -380,10 +427,11 @@ registry.RegisterKeywordsFromAssembly(typeof(MyKeyword).Assembly);
 | Exponential Backoff Retry | ✅ |
 | Libraries (files/http/json) | ✅ |
 | JSON Report | ✅ |
+| HTML Report | ✅ |
 | CLI | ✅ |
-| Browser Library | ⏳ |
-| HTML Report | ⏳ |
-| Workflow Persistence | ⏳ |
+| Browser Library | ✅ |
+| Database (SQLite) | ✅ |
+| Workflow Persistence | ✅ |
 | Expression Language | ⏳ |
 
 ## Лицензия

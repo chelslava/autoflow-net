@@ -5,6 +5,7 @@
 // =============================================================================
 
 using AutoFlow.Abstractions;
+using AutoFlow.Database;
 using AutoFlow.Library.Assertions;
 using AutoFlow.Library.Browser;
 using AutoFlow.Library.Files;
@@ -44,6 +45,9 @@ builder.Services.AddSingleton<SecretResolver>();
 
 // Lifecycle hooks - регистрируем все реализации из DI
 builder.Services.AddSingleton<WorkflowHookRunner>();
+
+// Database
+builder.Services.AddAutoFlowDatabase();
 
 // Keywords
 builder.Services.AddKeywordsFromAssembly(
@@ -220,9 +224,152 @@ listKeywordsCommand.SetHandler(() =>
     }
 });
 
+var historyCommand = new Command("history", "Показывает историю выполнений.");
+var historyLimitOption = new Option<int>(
+    name: "--limit",
+    description: "Максимальное количество записей.",
+    getDefaultValue: () => 20);
+var historyWorkflowOption = new Option<string?>(
+    name: "--workflow",
+    description: "Фильтр по имени workflow.");
+var historyStatusOption = new Option<string?>(
+    name: "--status",
+    description: "Фильтр по статусу (Passed, Failed, etc.).");
+
+historyCommand.AddOption(historyLimitOption);
+historyCommand.AddOption(historyWorkflowOption);
+historyCommand.AddOption(historyStatusOption);
+
+historyCommand.SetHandler(async (int limit, string? workflow, string? status) =>
+{
+    var repository = host.Services.GetRequiredService<IExecutionRepository>();
+    var records = await repository.GetListAsync(workflow, status, limit);
+
+    if (records.Count == 0)
+    {
+        Console.WriteLine("История пуста.");
+        return;
+    }
+
+    Console.WriteLine($"История выполнений ({records.Count} записей):");
+    Console.WriteLine();
+
+    foreach (var record in records)
+    {
+        var icon = record.Status == "Passed" ? "✓" : "✗";
+        Console.WriteLine($"{icon} [{record.RunId[..8]}] {record.WorkflowName}");
+        Console.WriteLine($"   Status: {record.Status} | Duration: {record.DurationMs}ms | Steps: {record.StepsPassed}/{record.StepsTotal}");
+        Console.WriteLine($"   Started: {record.StartedAtUtc}");
+        if (record.ErrorMessage is not null)
+            Console.WriteLine($"   Error: {record.ErrorMessage[..Math.Min(100, record.ErrorMessage.Length)]}...");
+        Console.WriteLine();
+    }
+}, historyLimitOption, historyWorkflowOption, historyStatusOption);
+
+var showCommand = new Command("show", "Показывает детали выполнения по RunId.");
+var showRunIdArgument = new Argument<string>(
+    name: "run-id",
+    description: "RunId выполнения.");
+
+showCommand.AddArgument(showRunIdArgument);
+
+showCommand.SetHandler(async (string runId) =>
+{
+    var repository = host.Services.GetRequiredService<IExecutionRepository>();
+    var record = await repository.GetByRunIdAsync(runId);
+
+    if (record is null)
+    {
+        Console.WriteLine($"Выполнение с RunId '{runId}' не найдено.");
+        return;
+    }
+
+    var icon = record.Status == "Passed" ? "✓" : "✗";
+    Console.WriteLine($"{icon} {record.WorkflowName}");
+    Console.WriteLine($"   RunId: {record.RunId}");
+    Console.WriteLine($"   Status: {record.Status}");
+    Console.WriteLine($"   Started: {record.StartedAtUtc}");
+    Console.WriteLine($"   Finished: {record.FinishedAtUtc}");
+    Console.WriteLine($"   Duration: {record.DurationMs}ms");
+    Console.WriteLine($"   Steps: {record.StepsPassed}/{record.StepsTotal} passed");
+    Console.WriteLine();
+
+    if (record.ErrorMessage is not null)
+    {
+        Console.WriteLine($"   Error: {record.ErrorMessage}");
+        Console.WriteLine();
+    }
+
+    if (record.StepsJson is not null)
+    {
+        Console.WriteLine("   Steps:");
+        var steps = System.Text.Json.JsonSerializer.Deserialize<System.Collections.Generic.List<StepExecutionResult>>(record.StepsJson);
+        if (steps is not null)
+        {
+            foreach (var step in steps)
+            {
+                var stepIcon = step.Status == ExecutionStatus.Passed ? "     ✓" : "     ✗";
+                Console.WriteLine($"{stepIcon} {step.StepId}: {step.KeywordName} ({step.Duration.TotalMilliseconds}ms)");
+                if (step.ErrorMessage is not null)
+                    Console.WriteLine($"       Error: {step.ErrorMessage}");
+            }
+        }
+    }
+}, showRunIdArgument);
+
+var statsCommand = new Command("stats", "Показывает статистику по выполнениям.");
+var statsWorkflowOption = new Option<string?>(
+    name: "--workflow",
+    description: "Фильтр по имени workflow.");
+var statsDaysOption = new Option<int>(
+    name: "--days",
+    description: "Период в днях.",
+    getDefaultValue: () => 30);
+
+statsCommand.AddOption(statsWorkflowOption);
+statsCommand.AddOption(statsDaysOption);
+
+statsCommand.SetHandler(async (string? workflow, int days) =>
+{
+    var repository = host.Services.GetRequiredService<IExecutionRepository>();
+    var from = DateTimeOffset.UtcNow.AddDays(-days);
+    var stats = await repository.GetStatisticsAsync(workflow, from);
+
+    Console.WriteLine($"Статистика за последние {days} дней:");
+    if (workflow is not null)
+        Console.WriteLine($"   Workflow: {workflow}");
+    Console.WriteLine();
+    Console.WriteLine($"   Всего запусков: {stats.TotalRuns}");
+    Console.WriteLine($"   Успешных: {stats.PassedRuns} ({stats.SuccessRate:F1}%)");
+    Console.WriteLine($"   Failed: {stats.FailedRuns}");
+    Console.WriteLine($"   Средняя длительность: {stats.AverageDurationMs:F0}ms");
+    Console.WriteLine($"   Min/Max длительность: {stats.MinDurationMs}ms / {stats.MaxDurationMs}ms");
+    Console.WriteLine($"   Всего шагов: {stats.TotalSteps}");
+}, statsWorkflowOption, statsDaysOption);
+
+var cleanCommand = new Command("clean", "Удаляет старые записи из истории.");
+var cleanDaysOption = new Option<int>(
+    name: "--older-than",
+    description: "Удалить записи старше указанного количества дней.",
+    getDefaultValue: () => 30);
+
+cleanCommand.AddOption(cleanDaysOption);
+
+cleanCommand.SetHandler(async (int olderThan) =>
+{
+    var repository = host.Services.GetRequiredService<IExecutionRepository>();
+    var deleted = await repository.DeleteOlderThanAsync(olderThan);
+
+    Console.WriteLine($"Удалено {deleted} записей старше {olderThan} дней.");
+}, cleanDaysOption);
+
 var rootCommand = new RootCommand("AutoFlow.NET CLI");
 rootCommand.AddCommand(runCommand);
 rootCommand.AddCommand(validateCommand);
 rootCommand.AddCommand(listKeywordsCommand);
+rootCommand.AddCommand(historyCommand);
+rootCommand.AddCommand(showCommand);
+rootCommand.AddCommand(statsCommand);
+rootCommand.AddCommand(cleanCommand);
 
 return await rootCommand.InvokeAsync(args);
