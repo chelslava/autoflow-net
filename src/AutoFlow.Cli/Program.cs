@@ -25,9 +25,20 @@ builder.Services.AddSingleton<IWorkflowParser, YamlWorkflowParser>();
 builder.Services.AddSingleton<JsonReportGenerator>();
 builder.Services.AddHttpClient<HttpRequestKeyword>();
 
-registry.RegisterKeywordsFromAssembly(typeof(LogInfoKeyword).Assembly);
-registry.RegisterKeywordsFromAssembly(typeof(FileReadKeyword).Assembly);
-registry.RegisterKeywordsFromAssembly(typeof(HttpRequestKeyword).Assembly);
+builder.Services.AddKeywordsFromAssembly(
+    typeof(LogInfoKeyword).Assembly,
+    (name, handlerType, argsType, category, description) =>
+        registry.Register(name, handlerType, argsType, category, description));
+
+builder.Services.AddKeywordsFromAssembly(
+    typeof(FileReadKeyword).Assembly,
+    (name, handlerType, argsType, category, description) =>
+        registry.Register(name, handlerType, argsType, category, description));
+
+builder.Services.AddKeywordsFromAssembly(
+    typeof(HttpRequestKeyword).Assembly,
+    (name, handlerType, argsType, category, description) =>
+        registry.Register(name, handlerType, argsType, category, description));
 
 using var host = builder.Build();
 
