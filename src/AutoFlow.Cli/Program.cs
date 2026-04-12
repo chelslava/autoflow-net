@@ -17,19 +17,20 @@ var builder = Host.CreateApplicationBuilder(args);
 builder.Logging.ClearProviders();
 builder.Logging.AddConsole();
 
-builder.Services.AddSingleton<KeywordRegistry>();
+var registry = new KeywordRegistry();
+
+builder.Services.AddSingleton(registry);
 builder.Services.AddSingleton<KeywordExecutor>();
 builder.Services.AddSingleton<IRuntimeEngine, RuntimeEngine>();
 builder.Services.AddSingleton<IWorkflowParser, YamlWorkflowParser>();
 builder.Services.AddSingleton<JsonReportGenerator>();
 builder.Services.AddHttpClient<HttpRequestKeyword>();
 
-using var host = builder.Build();
+registry.RegisterKeywordsFromAssembly(typeof(LogInfoKeyword).Assembly);
+registry.RegisterKeywordsFromAssembly(typeof(FileReadKeyword).Assembly);
+registry.RegisterKeywordsFromAssembly(typeof(HttpRequestKeyword).Assembly);
 
-var registry = host.Services.GetRequiredService<KeywordRegistry>();
-builder.Services.AddKeywordsFromAssembly(typeof(LogInfoKeyword).Assembly, registry.Register);
-builder.Services.AddKeywordsFromAssembly(typeof(FileReadKeyword).Assembly, registry.Register);
-builder.Services.AddKeywordsFromAssembly(typeof(HttpRequestKeyword).Assembly, registry.Register);
+using var host = builder.Build();
 
 var fileArgument = new Argument<FileInfo>(
     name: "file",

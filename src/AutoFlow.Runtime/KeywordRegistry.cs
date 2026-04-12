@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Reflection;
 using AutoFlow.Abstractions;
 
 namespace AutoFlow.Runtime;
@@ -39,4 +40,35 @@ public sealed class KeywordRegistry : IKeywordMetadataProvider
             .Select(r => new KeywordMetadata(r.Name, r.HandlerType.Name, r.Category, r.Description))
             .OrderBy(x => x.Name, StringComparer.OrdinalIgnoreCase)
             .ToArray();
+
+    public KeywordRegistry RegisterKeywordsFromAssembly(Assembly assembly)
+    {
+        var handlerTypes = assembly.GetTypes()
+            .Where(t => t is { IsAbstract: false, IsInterface: false })
+            .Select(type => new
+            {
+                Type = type,
+                Attribute = type.GetCustomAttribute<KeywordAttribute>(),
+                HandlerInterface = type.GetInterfaces()
+                    .FirstOrDefault(i =>
+                        i.IsGenericType &&
+                        i.GetGenericTypeDefinition() == typeof(IKeywordHandler<>))
+            })
+            .Where(x => x.Attribute is not null && x.HandlerInterface is not null)
+            .ToList();
+
+        foreach (var item in handlerTypes)
+        {
+            var argsType = item.HandlerInterface!.GetGenericArguments()[0];
+
+            Register(
+                item.Attribute!.Name,
+                item.Type,
+                argsType,
+                item.Attribute.Category,
+                item.Attribute.Description);
+        }
+
+        return this;
+    }
 }
