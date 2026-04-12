@@ -1,0 +1,12 @@
+name = "AutoFlow Starter"
+default_task = "main"
+
+[logging]
+level = "Information"
+
+[reporting]
+json = true
+html = false
+
+[plugins]
+assertions = true

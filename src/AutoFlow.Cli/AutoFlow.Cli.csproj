@@ -1,0 +1,23 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <OutputType>Exe</OutputType>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <AssemblyName>autoflow</AssemblyName>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="System.CommandLine" Version="2.0.0-beta4.22272.1" />
+    <PackageReference Include="Microsoft.Extensions.Hosting" Version="10.0.0" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Console" Version="10.0.0" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="10.0.0" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\AutoFlow.Abstractions\AutoFlow.Abstractions.csproj" />
+    <ProjectReference Include="..\AutoFlow.Parser\AutoFlow.Parser.csproj" />
+    <ProjectReference Include="..\AutoFlow.Runtime\AutoFlow.Runtime.csproj" />
+    <ProjectReference Include="..\AutoFlow.PluginModel\AutoFlow.PluginModel.csproj" />
+    <ProjectReference Include="..\..\libraries\AutoFlow.Library.Assertions\AutoFlow.Library.Assertions.csproj" />
+  </ItemGroup>
+</Project>

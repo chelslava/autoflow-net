@@ -1,0 +1,14 @@
+schema_version: 1
+name: demo_flow
+
+variables:
+  app_name: AutoFlow
+
+tasks:
+  main:
+    steps:
+      - step:
+          id: log_start
+          uses: log.info
+          with:
+            message: "Запуск ${app_name}"

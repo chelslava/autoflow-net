@@ -1,0 +1,26 @@
+# Сборка
+bin/
+obj/
+out/
+TestResults/
+
+# IDE
+.vs/
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Playwright
+playwright-report/
+test-results/
+ms-playwright/
+
+# Локальные файлы
+*.user
+*.suo
+*.cache
+*.tmp
+*.log
