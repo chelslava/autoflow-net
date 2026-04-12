@@ -1,0 +1,73 @@
+schema_version: 1
+name: advanced_demo
+
+variables:
+  app_name: AutoFlow.NET
+  api_base: https://jsonplaceholder.typicode.com
+
+tasks:
+  main:
+    steps:
+      - step:
+          id: log_start
+          uses: log.info
+          with:
+            message: "🚀 Запуск ${app_name}"
+
+      - step:
+          id: check_readme
+          uses: files.exists
+          with:
+            path: README.md
+          save_as:
+            exists: readme_exists
+
+      - if:
+          id: readme_branch
+          condition:
+            eq:
+              - "${readme_exists}"
+              - "True"
+          then:
+            - step:
+                id: read_readme
+                uses: files.read
+                with:
+                  path: README.md
+                save_as:
+                  content: readme_content
+
+            - step:
+                id: log_readme_size
+                uses: log.info
+                with:
+                  message: "📄 README размер: ${readme_content.length} символов"
+
+      - foreach:
+          id: process_environments
+          items: ["dev", "staging", "prod"]
+          as: env
+          steps:
+            - step:
+                id: log_env
+                uses: log.info
+                with:
+                  message: "🔧 Обработка окружения: ${env} [${env_index}]"
+
+      - call:
+          id: call_helper
+          task: helper_task
+          with:
+            message: "Hello from main!"
+
+  helper_task:
+    inputs:
+      message:
+        type: string
+        default: "Default message"
+    steps:
+      - step:
+          id: helper_log
+          uses: log.info
+          with:
+            message: "Helper: ${message}"
