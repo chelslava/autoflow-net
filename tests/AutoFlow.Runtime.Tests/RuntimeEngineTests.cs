@@ -1,7 +1,13 @@
-// Этот код нужен для проверки минимального выполнения шага через runtime.
+// =============================================================================
+// RuntimeEngineTests.cs — тесты для RuntimeEngine.
+//
+// Проверяет выполнение workflow с минимальным набором сервисов.
+// =============================================================================
+
 using AutoFlow.Abstractions;
 using AutoFlow.Library.Assertions;
 using AutoFlow.Runtime;
+using AutoFlow.Runtime.Secrets;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Xunit;
@@ -20,6 +26,13 @@ public sealed class RuntimeEngineTests
         services.AddSingleton(registry);
         services.AddSingleton<KeywordExecutor>();
         services.AddSingleton<IRuntimeEngine, RuntimeEngine>();
+
+        // Новые зависимости
+        services.AddSingleton<SecretMasker>();
+        services.AddSingleton<ISecretProvider, EnvSecretProvider>();
+        services.AddSingleton<ISecretProvider, FileSecretProvider>();
+        services.AddSingleton<SecretResolver>();
+        services.AddSingleton<WorkflowHookRunner>();
 
         services.AddKeywordsFromAssembly(typeof(LogInfoKeyword).Assembly, registry.Register);
 

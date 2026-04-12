@@ -1,0 +1,142 @@
+# advanced_features.yaml — пример новых возможностей AutoFlow.NET
+
+schema_version: 1
+name: advanced_features_demo
+
+variables:
+  app_name: AutoFlow.NET
+  api_base: https://jsonplaceholder.typicode.com
+
+tasks:
+  main:
+    # Блок обработки ошибок на уровне task
+    on_error:
+      - step:
+          id: notify_error
+          uses: log.info
+          with:
+            message: "❌ Workflow failed, sending alert..."
+
+    # Блок finally — выполняется всегда
+    finally:
+      - step:
+          id: cleanup
+          uses: log.info
+          with:
+            message: "🧹 Cleanup completed"
+
+    steps:
+      - step:
+          id: log_start
+          uses: log.info
+          with:
+            message: "🚀 Starting ${app_name}"
+
+      # Параллельное выполнение
+      - parallel:
+          id: fetch_parallel
+          max_concurrency: 3
+          error_mode: continue  # или fail_fast
+          steps:
+            - step:
+                id: fetch_users
+                uses: http.request
+                with:
+                  url: "${api_base}/users"
+                  method: GET
+                save_as:
+                  body: users_data
+
+            - step:
+                id: fetch_posts
+                uses: http.request
+                with:
+                  url: "${api_base}/posts"
+                  method: GET
+                save_as:
+                  body: posts_data
+
+            - step:
+                id: fetch_comments
+                uses: http.request
+                with:
+                  url: "${api_base}/comments"
+                  method: GET
+                save_as:
+                  body: comments_data
+
+      # Exponential backoff retry
+      - step:
+          id: unstable_api_call
+          uses: http.request
+          with:
+            url: "${api_base}/unstable-endpoint"
+            method: GET
+          retry:
+            attempts: 5
+            type: exponential
+            delay: "1s"
+            max_delay: "30s"
+            backoff_multiplier: 2.0
+            retry_on:
+              - TimeoutException
+              - HttpRequestException
+
+      # Conditional retry с skip_on
+      - step:
+          id: another_retry
+          uses: http.request
+          with:
+            url: "${api_base}/another-endpoint"
+            method: GET
+          retry:
+            attempts: 3
+            delay: "2s"
+            skip_on:
+              - ArgumentException
+              - InvalidOperationException
+
+  # Task с inputs и default values
+  helper_task:
+    inputs:
+      message:
+        type: string
+        required: false
+        default: "Default message"
+        description: "Сообщение для логирования"
+      count:
+        type: int
+        required: false
+        default: 1
+      api_key:
+        type: string
+        required: true
+        secret: true  # Маскируется в логах
+
+    on_error:
+      - step:
+          id: helper_error
+          uses: log.info
+          with:
+            message: "Helper task failed"
+
+    finally:
+      - step:
+          id: helper_cleanup
+          uses: log.info
+          with:
+            message: "Helper cleanup"
+
+    steps:
+      - step:
+          id: helper_log
+          uses: log.info
+          with:
+            message: "Helper: ${message} (count: ${count})"
+
+      # Использование секрета (подстановка из env или vault)
+      - step:
+          id: use_secret
+          uses: log.info
+          with:
+            message: "API Key: ${secret:MY_API_KEY}"

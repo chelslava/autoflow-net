@@ -70,7 +70,6 @@ VariableResolverTests.cs
  libraries/AutoFlow.Library.Assertions/obj/Debug/net10.0/ref/AutoFlow.Library.Assertions.dll
  src/
   AutoFlow.Abstractions/obj/Debug/net10.0/ref/AutoFlow.Abstractions.dll
-  AutoFlow.PluginModel/obj/Debug/net10.0/ref/AutoFlow.PluginModel.dll
   AutoFlow.Runtime/obj/Debug/net10.0/ref/AutoFlow.Runtime.dll
 <DOTNET>/packs/Microsoft.NETCore.App.Ref/10.0.5/ref/net10.0/
  Microsoft.CSharp.dll

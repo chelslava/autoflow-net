@@ -1,25 +1,46 @@
+// =============================================================================
+// RuntimeEngine.cs — движок выполнения workflow с поддержкой hooks, secrets, parallel.
+//
+// Поддерживает:
+// - Lifecycle hooks (OnWorkflowStart, OnStepStart, OnError и т.д.)
+// - Secrets management с маскированием
+// - Parallel execution
+// - DI scope per workflow
+// - OnError/Finally blocks
+// - Exponential backoff retry
+// =============================================================================
+
 using System;
+using System.Collections.Concurrent;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using AutoFlow.Abstractions;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
 namespace AutoFlow.Runtime;
 
 public sealed class RuntimeEngine : IRuntimeEngine
 {
-    private readonly IServiceProvider _serviceProvider;
+    private readonly IServiceProvider _rootServiceProvider;
     private readonly KeywordExecutor _keywordExecutor;
+    private readonly WorkflowHookRunner _hookRunner;
+    private readonly SecretResolver _secretResolver;
     private readonly ILogger<RuntimeEngine> _logger;
 
     public RuntimeEngine(
         IServiceProvider serviceProvider,
         KeywordExecutor keywordExecutor,
+        WorkflowHookRunner hookRunner,
+        SecretResolver secretResolver,
         ILogger<RuntimeEngine> logger)
     {
-        _serviceProvider = serviceProvider ?? throw new ArgumentNullException(nameof(serviceProvider));
+        _rootServiceProvider = serviceProvider ?? throw new ArgumentNullException(nameof(serviceProvider));
         _keywordExecutor = keywordExecutor ?? throw new ArgumentNullException(nameof(keywordExecutor));
+        _hookRunner = hookRunner ?? throw new ArgumentNullException(nameof(hookRunner));
+        _secretResolver = secretResolver ?? throw new ArgumentNullException(nameof(secretResolver));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
@@ -31,6 +52,7 @@ public sealed class RuntimeEngine : IRuntimeEngine
         ArgumentNullException.ThrowIfNull(document);
         ArgumentNullException.ThrowIfNull(options);
 
+        var runId = options.RunId ?? Guid.NewGuid().ToString("N");
         var startedAt = DateTimeOffset.UtcNow;
 
         var runResult = new RunResult
@@ -40,21 +62,102 @@ public sealed class RuntimeEngine : IRuntimeEngine
             Status = ExecutionStatus.Passed
         };
 
+        // Создаём DI scope для каждого workflow
+        using var scope = _rootServiceProvider.CreateScope();
+        var scopedServices = scope.ServiceProvider;
+
         var variables = document.Variables
             .Concat(options.Variables)
             .GroupBy(x => x.Key, StringComparer.OrdinalIgnoreCase)
             .ToDictionary(x => x.Key, x => x.Last().Value, StringComparer.OrdinalIgnoreCase);
 
-        var context = new ExecutionContext(_serviceProvider, variables);
+        var context = new ExecutionContext(scopedServices, variables);
 
-        if (!document.Tasks.TryGetValue("main", out var mainTask))
-            throw new InvalidOperationException("В документе не найдена задача 'main'.");
+        var workflowContext = new WorkflowContext
+        {
+            RunId = runId,
+            WorkflowName = document.Name,
+            FilePath = document.FilePath,
+            Variables = variables,
+            StartedAtUtc = startedAt,
+            ExecutionContext = context
+        };
 
-        await ExecuteNodes(mainTask.Steps, document, context, runResult, cancellationToken).ConfigureAwait(false);
+        Exception? workflowException = null;
 
-        runResult.FinishedAtUtc = DateTimeOffset.UtcNow;
+        try
+        {
+            await _hookRunner.OnWorkflowStartAsync(workflowContext).ConfigureAwait(false);
+
+            if (!document.Tasks.TryGetValue("main", out var mainTask))
+                throw new InvalidOperationException("В документе не найдена задача 'main'.");
+
+            // Выполняем main task с поддержкой on_error/finally
+            await ExecuteTaskWithHandlers(mainTask, document, context, runResult, workflowContext, cancellationToken).ConfigureAwait(false);
+        }
+        catch (Exception ex)
+        {
+            workflowException = ex;
+            runResult.Status = ExecutionStatus.Failed;
+
+            _logger.LogError(ex, "Ошибка при выполнении workflow {WorkflowName}", document.Name);
+            await _hookRunner.OnErrorAsync(workflowContext, ex).ConfigureAwait(false);
+        }
+        finally
+        {
+            runResult.FinishedAtUtc = DateTimeOffset.UtcNow;
+            await _hookRunner.OnWorkflowEndAsync(workflowContext, runResult).ConfigureAwait(false);
+        }
 
         return runResult;
+    }
+
+    private async Task ExecuteTaskWithHandlers(
+        TaskNode task,
+        WorkflowDocument document,
+        ExecutionContext context,
+        RunResult runResult,
+        WorkflowContext workflowContext,
+        CancellationToken cancellationToken)
+    {
+        Exception? taskException = null;
+
+        try
+        {
+            await ExecuteNodes(task.Steps, document, context, runResult, workflowContext, cancellationToken).ConfigureAwait(false);
+        }
+        catch (Exception ex)
+        {
+            taskException = ex;
+            runResult.Status = ExecutionStatus.Failed;
+            _logger.LogError(ex, "Ошибка при выполнении task");
+
+            // Выполняем on_error блок
+            if (task.OnError is not null)
+            {
+                _logger.LogInformation("Выполняется on_error блок");
+                await ExecuteNodes(task.OnError.Steps, document, context, runResult, workflowContext, cancellationToken).ConfigureAwait(false);
+            }
+        }
+        finally
+        {
+            // Выполняем finally блок в любом случае
+            if (task.Finally is not null)
+            {
+                _logger.LogInformation("Выполняется finally блок");
+                try
+                {
+                    await ExecuteNodes(task.Finally.Steps, document, context, runResult, workflowContext, cancellationToken).ConfigureAwait(false);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Ошибка в finally блоке");
+                }
+            }
+        }
+
+        if (taskException is not null && task.OnError is null)
+            throw taskException;
     }
 
     private async Task ExecuteNodes(
@@ -62,6 +165,7 @@ public sealed class RuntimeEngine : IRuntimeEngine
         WorkflowDocument document,
         ExecutionContext context,
         RunResult runResult,
+        WorkflowContext workflowContext,
         CancellationToken cancellationToken)
     {
         foreach (var node in nodes)
@@ -71,7 +175,7 @@ public sealed class RuntimeEngine : IRuntimeEngine
             if (runResult.Status == ExecutionStatus.Failed)
                 break;
 
-            await ExecuteNode(node, document, context, runResult, cancellationToken).ConfigureAwait(false);
+            await ExecuteNode(node, document, context, runResult, workflowContext, cancellationToken).ConfigureAwait(false);
         }
     }
 
@@ -80,28 +184,33 @@ public sealed class RuntimeEngine : IRuntimeEngine
         WorkflowDocument document,
         ExecutionContext context,
         RunResult runResult,
+        WorkflowContext workflowContext,
         CancellationToken cancellationToken)
     {
         switch (node)
         {
             case StepNode stepNode:
-                await ExecuteStep(stepNode, context, runResult, cancellationToken).ConfigureAwait(false);
+                await ExecuteStep(stepNode, context, runResult, workflowContext, cancellationToken).ConfigureAwait(false);
                 break;
 
             case IfNode ifNode:
-                await ExecuteIf(ifNode, document, context, runResult, cancellationToken).ConfigureAwait(false);
+                await ExecuteIf(ifNode, document, context, runResult, workflowContext, cancellationToken).ConfigureAwait(false);
                 break;
 
             case ForEachNode forEachNode:
-                await ExecuteForEach(forEachNode, document, context, runResult, cancellationToken).ConfigureAwait(false);
+                await ExecuteForEach(forEachNode, document, context, runResult, workflowContext, cancellationToken).ConfigureAwait(false);
                 break;
 
             case CallNode callNode:
-                await ExecuteCall(callNode, document, context, runResult, cancellationToken).ConfigureAwait(false);
+                await ExecuteCall(callNode, document, context, runResult, workflowContext, cancellationToken).ConfigureAwait(false);
                 break;
 
             case GroupNode groupNode:
-                await ExecuteGroup(groupNode, document, context, runResult, cancellationToken).ConfigureAwait(false);
+                await ExecuteGroup(groupNode, document, context, runResult, workflowContext, cancellationToken).ConfigureAwait(false);
+                break;
+
+            case ParallelNode parallelNode:
+                await ExecuteParallel(parallelNode, document, context, runResult, workflowContext, cancellationToken).ConfigureAwait(false);
                 break;
 
             default:
@@ -113,6 +222,7 @@ public sealed class RuntimeEngine : IRuntimeEngine
         StepNode step,
         ExecutionContext context,
         RunResult runResult,
+        WorkflowContext workflowContext,
         CancellationToken cancellationToken)
     {
         if (!ShouldExecute(step.When, context))
@@ -141,13 +251,32 @@ public sealed class RuntimeEngine : IRuntimeEngine
         var effectiveToken = linkedCts?.Token ?? cancellationToken;
 
         var maxAttempts = step.Retry?.Attempts ?? 1;
-        var delayMs = ParseDelay(step.Retry?.Delay);
+        var baseDelayMs = ParseDelay(step.Retry?.Delay);
+        var retryType = step.Retry?.Type ?? RetryType.Fixed;
 
         for (var attempt = 1; attempt <= maxAttempts; attempt++)
         {
+            var stepContext = new StepContext
+            {
+                RunId = workflowContext.RunId,
+                StepId = step.Id,
+                KeywordName = step.Uses,
+                RawArgs = step.With,
+                Attempt = attempt,
+                MaxAttempts = maxAttempts,
+                StartedAtUtc = DateTimeOffset.UtcNow,
+                ExecutionContext = context
+            };
+
             try
             {
+                await _hookRunner.OnStepStartAsync(stepContext).ConfigureAwait(false);
+
                 var resolvedArgs = VariableResolver.ResolveObject(step.With, context);
+
+                // Разрешаем секреты
+                resolvedArgs = await _secretResolver.ResolveObjectAsync(resolvedArgs, cancellationToken).ConfigureAwait(false);
+                stepContext = stepContext.WithResolvedArgs(resolvedArgs as Dictionary<string, object?> ?? new Dictionary<string, object?>());
 
                 var keywordResult = await _keywordExecutor.ExecuteAsync(
                     context,
@@ -156,13 +285,21 @@ public sealed class RuntimeEngine : IRuntimeEngine
                     resolvedArgs,
                     effectiveToken).ConfigureAwait(false);
 
+                // Маскируем секреты в результатах
+                if (keywordResult.ErrorMessage is not null)
+                    keywordResult = KeywordResult.Failure(
+                        _secretResolver.GetMasker().Mask(keywordResult.ErrorMessage),
+                        keywordResult.Logs);
+
                 stepResult.Status = keywordResult.IsSuccess
                     ? ExecutionStatus.Passed
                     : ExecutionStatus.Failed;
 
                 stepResult.Outputs = keywordResult.Outputs;
                 stepResult.ErrorMessage = keywordResult.ErrorMessage;
-                stepResult.Logs.AddRange(keywordResult.Logs);
+                stepResult.Logs.AddRange(keywordResult.Logs.Select(l => _secretResolver.GetMasker().Mask(l)));
+
+                await _hookRunner.OnStepEndAsync(stepContext, stepResult).ConfigureAwait(false);
 
                 if (keywordResult.IsSuccess)
                 {
@@ -204,6 +341,7 @@ public sealed class RuntimeEngine : IRuntimeEngine
 
                 if (attempt < maxAttempts)
                 {
+                    var delayMs = CalculateRetryDelay(retryType, baseDelayMs, attempt, step.Retry);
                     _logger.LogWarning(
                         "Попытка {Attempt}/{Max} для шага {StepId} не удалась. Повтор через {Delay}ms.",
                         attempt, maxAttempts, step.Id, delayMs);
@@ -220,6 +358,7 @@ public sealed class RuntimeEngine : IRuntimeEngine
             {
                 stepResult.Status = ExecutionStatus.Failed;
                 stepResult.ErrorMessage = $"Таймаут {step.Timeout} превышен.";
+                await _hookRunner.OnStepEndAsync(stepContext, stepResult).ConfigureAwait(false);
                 HandleStepFailure(step, stepResult, runResult);
                 break;
             }
@@ -229,15 +368,17 @@ public sealed class RuntimeEngine : IRuntimeEngine
                     step.Id, attempt, maxAttempts);
 
                 stepResult.Status = ExecutionStatus.Failed;
-                stepResult.ErrorMessage = ex.Message;
+                stepResult.ErrorMessage = _secretResolver.GetMasker().Mask(ex.Message);
 
-                if (attempt < maxAttempts)
+                if (attempt < maxAttempts && ShouldRetry(ex, step.Retry))
                 {
+                    var delayMs = CalculateRetryDelay(retryType, baseDelayMs, attempt, step.Retry);
                     if (delayMs > 0)
                         await Task.Delay(delayMs, cancellationToken).ConfigureAwait(false);
                 }
-                else
+                else if (attempt >= maxAttempts)
                 {
+                    await _hookRunner.OnStepEndAsync(stepContext, stepResult).ConfigureAwait(false);
                     HandleStepFailure(step, stepResult, runResult);
                 }
             }
@@ -245,6 +386,55 @@ public sealed class RuntimeEngine : IRuntimeEngine
 
         stepResult.FinishedAtUtc = DateTimeOffset.UtcNow;
         runResult.Steps.Add(stepResult);
+    }
+
+    private bool ShouldRetry(Exception ex, RetryNode? retry)
+    {
+        if (retry is null)
+            return true;
+
+        // Если указан SkipOn, проверяем что исключение не в списке
+        if (retry.SkipOn.Count > 0)
+        {
+            var exceptionName = ex.GetType().Name;
+            if (retry.SkipOn.Any(skip => skip.Equals(exceptionName, StringComparison.OrdinalIgnoreCase) ||
+                                          ex.GetType().FullName?.Contains(skip, StringComparison.OrdinalIgnoreCase) == true))
+                return false;
+        }
+
+        // Если указан RetryOn, проверяем что исключение в списке
+        if (retry.RetryOn.Count > 0)
+        {
+            var exceptionName = ex.GetType().Name;
+            return retry.RetryOn.Any(retry => retry.Equals(exceptionName, StringComparison.OrdinalIgnoreCase) ||
+                                               ex.GetType().FullName?.Contains(retry, StringComparison.OrdinalIgnoreCase) == true);
+        }
+
+        return true;
+    }
+
+    private int CalculateRetryDelay(RetryType retryType, int baseDelayMs, int attempt, RetryNode? retry)
+    {
+        if (baseDelayMs <= 0)
+            return 0;
+
+        return retryType switch
+        {
+            RetryType.Exponential => CalculateExponentialDelay(baseDelayMs, attempt, retry?.BackoffMultiplier ?? 2.0, retry?.MaxDelay),
+            RetryType.Jitter => baseDelayMs + Random.Shared.Next(0, baseDelayMs),
+            _ => baseDelayMs
+        };
+    }
+
+    private int CalculateExponentialDelay(int baseDelayMs, int attempt, double multiplier, string? maxDelay)
+    {
+        var delay = (int)(baseDelayMs * Math.Pow(multiplier, attempt - 1));
+        var maxDelayMs = ParseDelay(maxDelay);
+
+        if (maxDelayMs > 0 && delay > maxDelayMs)
+            delay = maxDelayMs;
+
+        return delay;
     }
 
     private void HandleStepFailure(StepNode step, StepExecutionResult stepResult, RunResult runResult)
@@ -260,11 +450,63 @@ public sealed class RuntimeEngine : IRuntimeEngine
         }
     }
 
+    private async Task ExecuteParallel(
+        ParallelNode parallel,
+        WorkflowDocument document,
+        ExecutionContext context,
+        RunResult runResult,
+        WorkflowContext workflowContext,
+        CancellationToken cancellationToken)
+    {
+        _logger.LogInformation("Выполняется параллельный блок: {Id}, max_concurrency={MaxConcurrency}",
+            parallel.Id, parallel.MaxConcurrency);
+
+        var semaphore = new SemaphoreSlim(parallel.MaxConcurrency);
+        var exceptions = new ConcurrentBag<Exception>();
+        var failed = false;
+
+        var tasks = parallel.Steps.Select(async node =>
+        {
+            await semaphore.WaitAsync(cancellationToken).ConfigureAwait(false);
+            try
+            {
+                if (parallel.ErrorMode == ParallelErrorMode.FailFast && failed)
+                    return;
+
+                await ExecuteNode(node, document, context, runResult, workflowContext, cancellationToken).ConfigureAwait(false);
+            }
+            catch (Exception ex)
+            {
+                exceptions.Add(ex);
+                failed = true;
+            }
+            finally
+            {
+                semaphore.Release();
+            }
+        }).ToList();
+
+        await Task.WhenAll(tasks).ConfigureAwait(false);
+
+        if (exceptions.Count > 0)
+        {
+            if (parallel.ErrorMode == ParallelErrorMode.FailFast)
+            {
+                throw new AggregateException("Ошибки в параллельном блоке", exceptions);
+            }
+            else
+            {
+                _logger.LogWarning("Параллельный блок завершён с {Count} ошибками", exceptions.Count);
+            }
+        }
+    }
+
     private async Task ExecuteIf(
         IfNode ifNode,
         WorkflowDocument document,
         ExecutionContext context,
         RunResult runResult,
+        WorkflowContext workflowContext,
         CancellationToken cancellationToken)
     {
         var conditionMet = EvaluateCondition(ifNode.Condition, context);
@@ -277,7 +519,7 @@ public sealed class RuntimeEngine : IRuntimeEngine
 
         if (nodes.Count > 0)
         {
-            await ExecuteNodes(nodes, document, context, runResult, cancellationToken).ConfigureAwait(false);
+            await ExecuteNodes(nodes, document, context, runResult, workflowContext, cancellationToken).ConfigureAwait(false);
         }
     }
 
@@ -286,11 +528,11 @@ public sealed class RuntimeEngine : IRuntimeEngine
         WorkflowDocument document,
         ExecutionContext context,
         RunResult runResult,
+        WorkflowContext workflowContext,
         CancellationToken cancellationToken)
     {
         object? items;
 
-        // Если Items — строка, считаем что это выражение
         if (forEach.Items is string itemsExpression)
         {
             var expression = itemsExpression.StartsWith("${")
@@ -300,7 +542,6 @@ public sealed class RuntimeEngine : IRuntimeEngine
         }
         else
         {
-            // Иначе используем как есть (массив, список и т.д.)
             items = forEach.Items;
         }
 
@@ -318,7 +559,7 @@ public sealed class RuntimeEngine : IRuntimeEngine
             context.SetVariable(forEach.As, item);
             context.SetVariable($"{forEach.As}_index", index++);
 
-            await ExecuteNodes(forEach.Steps, document, context, runResult, cancellationToken).ConfigureAwait(false);
+            await ExecuteNodes(forEach.Steps, document, context, runResult, workflowContext, cancellationToken).ConfigureAwait(false);
 
             if (runResult.Status == ExecutionStatus.Failed)
                 break;
@@ -330,6 +571,7 @@ public sealed class RuntimeEngine : IRuntimeEngine
         WorkflowDocument document,
         ExecutionContext context,
         RunResult runResult,
+        WorkflowContext workflowContext,
         CancellationToken cancellationToken)
     {
         if (!document.Tasks.TryGetValue(call.Task, out var calledTask))
@@ -353,13 +595,25 @@ public sealed class RuntimeEngine : IRuntimeEngine
             context.Services,
             new Dictionary<string, object?>(context.Variables));
 
-        foreach (var (key, value) in call.Inputs)
+        // Применяем default значения для inputs
+        foreach (var (inputName, inputDef) in calledTask.Inputs)
         {
-            var resolved = VariableResolver.ResolveObject(value, context);
-            childContext.SetVariable(key, resolved);
+            if (call.Inputs.TryGetValue(inputName, out var inputValue))
+            {
+                var resolved = VariableResolver.ResolveObject(inputValue, context);
+                childContext.SetVariable(inputName, resolved);
+            }
+            else if (inputDef.Default is not null)
+            {
+                childContext.SetVariable(inputName, inputDef.Default);
+            }
+            else if (inputDef.Required)
+            {
+                throw new ArgumentException($"Обязательный параметр '{inputName}' не передан для задачи '{call.Task}'.");
+            }
         }
 
-        await ExecuteNodes(calledTask.Steps, document, childContext, runResult, cancellationToken).ConfigureAwait(false);
+        await ExecuteTaskWithHandlers(calledTask, document, childContext, runResult, workflowContext, cancellationToken).ConfigureAwait(false);
 
         if (!string.IsNullOrWhiteSpace(call.SaveAs))
         {
@@ -375,11 +629,12 @@ public sealed class RuntimeEngine : IRuntimeEngine
         WorkflowDocument document,
         ExecutionContext context,
         RunResult runResult,
+        WorkflowContext workflowContext,
         CancellationToken cancellationToken)
     {
         _logger.LogInformation("Выполняется группа: {GroupName}", group.Name);
 
-        await ExecuteNodes(group.Steps, document, context, runResult, cancellationToken).ConfigureAwait(false);
+        await ExecuteNodes(group.Steps, document, context, runResult, workflowContext, cancellationToken).ConfigureAwait(false);
     }
 
     private bool ShouldExecute(ConditionNode? condition, IExecutionContext context)

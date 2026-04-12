@@ -60,7 +60,6 @@ obj/Debug/net10.0/
  .NETCoreApp,Version=v10.0.AssemblyAttributes.cs
  AutoFlow.PluginModel.AssemblyInfo.cs
  AutoFlow.PluginModel.GlobalUsings.g.cs
-ServiceCollectionExtensions.cs
 
 [metadataReferences]
 ../AutoFlow.Abstractions/obj/Debug/net10.0/ref/AutoFlow.Abstractions.dll

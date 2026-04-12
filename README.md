@@ -6,10 +6,14 @@
 
 - **YAML DSL** — описание workflows в декларативном стиле
 - **Plugin Architecture** — расширяемая система keywords
-- **Control Flow** — if/foreach/call/group конструкции
-- **Variables** — `${var}`, `${env:NAME}`, `${steps.id.outputs}`
-- **Retry & Timeout** — повторные попытки, таймауты, обработка ошибок
-- **Reports** — JSON-отчёты о выполнении
+- **Control Flow** — if/foreach/call/group/parallel конструкции
+- **Variables** — `${var}`, `${env:NAME}`, `${steps.id.outputs}`, `${secret:NAME}`
+- **Retry & Timeout** — повторные попытки с exponential backoff, таймауты
+- **Parallel Execution** — параллельное выполнение независимых шагов
+- **Secrets Management** — безопасная работа с секретами, маскирование в логах
+- **Lifecycle Hooks** — расширяемая система событий workflow
+- **Error Handling** — on_error/finally блоки на уровне task
+- **Reports** — JSON-отчёты о выполнении с маскированием секретов
 
 ## Установка
 
@@ -36,6 +40,12 @@ dotnet run --project src/AutoFlow.Cli -- run examples/flow.yaml
 dotnet run --project src/AutoFlow.Cli -- run examples/flow.yaml --output report.json
 ```
 
+С указанием Run ID:
+
+```bash
+dotnet run --project src/AutoFlow.Cli -- run examples/flow.yaml --run-id my-run-123
+```
+
 ### Валидация workflow
 
 ```bash
@@ -60,6 +70,20 @@ variables:
 
 tasks:
   main:
+    on_error:
+      - step:
+          id: notify_error
+          uses: log.info
+          with:
+            message: "❌ Workflow failed"
+
+    finally:
+      - step:
+          id: cleanup
+          uses: log.info
+          with:
+            message: "🧹 Cleanup completed"
+
     steps:
       - step:
           id: log_start
@@ -67,51 +91,125 @@ tasks:
           with:
             message: "Запуск ${app_name}"
 
-      - step:
-          id: check_config
-          uses: files.exists
-          with:
-            path: config.json
-          save_as:
-            exists: config_exists
-
-      - if:
-          id: check_branch
-          condition:
-            eq:
-              - "${config_exists}"
-              - "True"
-          then:
-            - step:
-                id: read_config
-                uses: files.read
-                with:
-                  path: config.json
-                save_as:
-                  content: config_data
-
-      - foreach:
-          id: process_items
-          items: ["alpha", "beta", "gamma"]
-          as: item
+      - parallel:
+          id: fetch_data
+          max_concurrency: 3
           steps:
             - step:
-                id: log_item
-                uses: log.info
+                id: fetch_users
+                uses: http.request
                 with:
-                  message: "Обработка ${item} [${item_index}]"
+                  url: "${api_url}/users"
+                  method: GET
 
-      - call:
-          id: call_task
-          task: helper_task
+            - step:
+                id: fetch_posts
+                uses: http.request
+                with:
+                  url: "${api_url}/posts"
+                  method: GET
 
-  helper_task:
+      - step:
+          id: call_api
+          uses: http.request
+          with:
+            url: "${api_url}/data"
+            method: GET
+          retry:
+            attempts: 5
+            type: exponential
+            delay: "1s"
+            max_delay: "30s"
+```
+
+## Параллельное выполнение
+
+```yaml
+tasks:
+  main:
+    steps:
+      - parallel:
+          id: parallel_fetch
+          max_concurrency: 5
+          error_mode: continue  # или fail_fast
+          steps:
+            - step: { id: api1, uses: http.request, with: { url: api1 } }
+            - step: { id: api2, uses: http.request, with: { url: api2 } }
+```
+
+## Secrets Management
+
+Автоматическое маскирование секретов в логах и отчётах:
+
+```yaml
+tasks:
+  main:
+    inputs:
+      api_key:
+        type: string
+        required: true
+        secret: true  # Маскируется в логах
+
     steps:
       - step:
-          id: helper_log
-          uses: log.info
+          id: use_secret
+          uses: http.request
           with:
-            message: "Helper task executed"
+            url: https://api.example.com
+            headers:
+              Authorization: "Bearer ${secret:MY_API_KEY}"
+```
+
+Secrets загружаются из:
+- Переменных окружения: `${secret:env:API_KEY}`
+- Файлов (Docker/K8s secrets): `${secret:file:/run/secrets/api_key}`
+
+## Lifecycle Hooks
+
+Создайте hook для перехвата событий:
+
+```csharp
+public class MyHook : IWorkflowLifecycleHook
+{
+    public int Order => 10;
+
+    public Task OnWorkflowStartAsync(WorkflowContext ctx)
+    {
+        Console.WriteLine($"Workflow started: {ctx.WorkflowName}");
+        return Task.CompletedTask;
+    }
+
+    public Task OnStepEndAsync(StepContext ctx, StepExecutionResult result)
+    {
+        Console.WriteLine($"Step {ctx.StepId}: {result.Status}");
+        return Task.CompletedTask;
+    }
+}
+```
+
+Регистрация в DI:
+
+```csharp
+services.AddSingleton<IWorkflowLifecycleHook, MyHook>();
+```
+
+## Retry с Exponential Backoff
+
+```yaml
+- step:
+    id: unstable_api
+    uses: http.request
+    with:
+      url: https://unstable.api.com
+    retry:
+      attempts: 5
+      type: exponential
+      delay: "1s"
+      max_delay: "1m"
+      backoff_multiplier: 2.0
+      retry_on:
+        - TimeoutException
+        - HttpRequestException
 ```
 
 ## Доступные Keywords
@@ -134,9 +232,10 @@ AutoFlow.sln
 │   ├── AutoFlow.Abstractions/    # Контракты и модели DSL
 │   ├── AutoFlow.Parser/          # YAML → AST парсер
 │   ├── AutoFlow.Runtime/         # Движок выполнения
+│   │   ├── Hooks/                # Lifecycle hooks
+│   │   └── Secrets/              # Secret providers
 │   ├── AutoFlow.Validation/      # Валидация workflow
 │   ├── AutoFlow.Reporting/       # Генерация отчётов
-│   ├── AutoFlow.PluginModel/     # Базовая модель plugin
 │   └── AutoFlow.Cli/             # Консольный интерфейс
 ├── libraries/
 │   ├── AutoFlow.Library.Assertions/  # log.info
@@ -147,9 +246,9 @@ AutoFlow.sln
 │   ├── AutoFlow.Runtime.Tests/
 │   └── AutoFlow.Validation.Tests/
 ├── examples/
-│   └── flow.yaml
-└── doc/
-    └── autoflow_mvp_technical_spec.md
+│   ├── flow.yaml
+│   ├── advanced_flow.yaml
+│   └── advanced_features.yaml
 ```
 
 ## Разработка своего Keyword
@@ -183,7 +282,7 @@ public class MyKeyword : IKeywordHandler<MyKeywordArgs>
 registry.RegisterKeywordsFromAssembly(typeof(MyKeyword).Assembly);
 ```
 
-## Статус MVP
+## Статус реализации
 
 | Компонент | Статус |
 |-----------|--------|
@@ -191,11 +290,18 @@ registry.RegisterKeywordsFromAssembly(typeof(MyKeyword).Assembly);
 | Validation | ✅ |
 | Runtime | ✅ |
 | Control Flow (if/foreach/call) | ✅ |
+| Parallel Execution | ✅ |
+| Lifecycle Hooks | ✅ |
+| Secrets Management | ✅ |
+| Error Handling (on_error/finally) | ✅ |
+| Exponential Backoff Retry | ✅ |
 | Libraries (files/http/json) | ✅ |
 | JSON Report | ✅ |
 | CLI | ✅ |
 | Browser Library | ⏳ |
 | HTML Report | ⏳ |
+| Workflow Persistence | ⏳ |
+| Expression Language | ⏳ |
 
 ## Лицензия
 

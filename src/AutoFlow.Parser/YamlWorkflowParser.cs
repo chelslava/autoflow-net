@@ -110,7 +110,38 @@ public sealed class YamlWorkflowParser : IWorkflowParser
             Description = GetStringValue(taskMapping, "description"),
             Inputs = ParseInputDefinitions(taskMapping),
             Outputs = ParseOutputDefinitions(taskMapping),
-            Steps = ParseSteps(taskMapping)
+            Steps = ParseSteps(taskMapping),
+            OnError = ParseOnError(taskMapping),
+            Finally = ParseFinally(taskMapping),
+            Timeout = GetStringValue(taskMapping, "timeout")
+        };
+    }
+
+    private OnErrorNode? ParseOnError(YamlMappingNode taskMapping)
+    {
+        if (!taskMapping.Children.TryGetValue("on_error", out var onErrorNode))
+            return null;
+
+        if (onErrorNode is not YamlMappingNode onErrorMapping)
+            return null;
+
+        return new OnErrorNode
+        {
+            Steps = ParseStepsInField(onErrorMapping, "steps")
+        };
+    }
+
+    private FinallyNode? ParseFinally(YamlMappingNode taskMapping)
+    {
+        if (!taskMapping.Children.TryGetValue("finally", out var finallyNode))
+            return null;
+
+        if (finallyNode is not YamlMappingNode finallyMapping)
+            return null;
+
+        return new FinallyNode
+        {
+            Steps = ParseStepsInField(finallyMapping, "steps")
         };
     }
 
@@ -143,7 +174,9 @@ public sealed class YamlWorkflowParser : IWorkflowParser
         {
             Type = GetRequiredStringValue(inputMapping, "type"),
             Required = GetBoolValue(inputMapping, "required", false),
-            Secret = GetBoolValue(inputMapping, "secret", false)
+            Secret = GetBoolValue(inputMapping, "secret", false),
+            Default = ParseScalarValue(inputMapping, "default"),
+            Description = GetStringValue(inputMapping, "description")
         };
     }
 
@@ -219,7 +252,10 @@ public sealed class YamlWorkflowParser : IWorkflowParser
         if (stepMapping.Children.TryGetValue("group", out var groupContent))
             return ParseGroupNode(groupContent);
 
-        throw new ArgumentException($"Неизвестный тип узла в steps. Доступные: step, if, for_each, call, group.", nameof(node));
+        if (stepMapping.Children.TryGetValue("parallel", out var parallelContent))
+            return ParseParallelNode(parallelContent);
+
+        throw new ArgumentException($"Неизвестный тип узла в steps. Доступные: step, if, for_each, call, group, parallel.", nameof(node));
     }
 
     private StepNode ParseStepNode(YamlNode node)
@@ -237,6 +273,26 @@ public sealed class YamlWorkflowParser : IWorkflowParser
             Timeout = GetStringValue(stepMapping, "timeout"),
             Retry = ParseRetry(stepMapping),
             When = ParseCondition(stepMapping, "when")
+        };
+    }
+
+    private ParallelNode ParseParallelNode(YamlNode node)
+    {
+        if (node is not YamlMappingNode parallelMapping)
+            throw new ArgumentException("Parallel content должна быть объектом (mapping).", nameof(node));
+
+        var errorMode = GetStringValue(parallelMapping, "error_mode")?.ToLowerInvariant() switch
+        {
+            "continue" => ParallelErrorMode.Continue,
+            _ => ParallelErrorMode.FailFast
+        };
+
+        return new ParallelNode
+        {
+            Id = GetStringValue(parallelMapping, "id") ?? $"parallel_{Guid.NewGuid():N}",
+            MaxConcurrency = GetIntValue(parallelMapping, "max_concurrency", 10),
+            Steps = ParseStepsInField(parallelMapping, "steps"),
+            ErrorMode = errorMode
         };
     }
 
@@ -378,11 +434,40 @@ public sealed class YamlWorkflowParser : IWorkflowParser
         if (retryNode is not YamlMappingNode retryMapping)
             return null;
 
+        var retryType = GetStringValue(retryMapping, "type")?.ToLowerInvariant() switch
+        {
+            "exponential" => RetryType.Exponential,
+            "jitter" => RetryType.Jitter,
+            _ => RetryType.Fixed
+        };
+
         return new RetryNode
         {
             Attempts = GetIntValue(retryMapping, "attempts", 1),
-            Delay = GetStringValue(retryMapping, "delay")
+            Delay = GetStringValue(retryMapping, "delay"),
+            Type = retryType,
+            BackoffMultiplier = GetDoubleValue(retryMapping, "backoff_multiplier", 2.0),
+            MaxDelay = GetStringValue(retryMapping, "max_delay"),
+            RetryOn = ParseStringList(retryMapping, "retry_on"),
+            SkipOn = ParseStringList(retryMapping, "skip_on")
         };
+    }
+
+    private List<string> ParseStringList(YamlMappingNode mapping, string key)
+    {
+        if (!mapping.Children.TryGetValue(key, out var node))
+            return new List<string>();
+
+        if (node is YamlSequenceNode sequence)
+        {
+            return sequence.Children
+                .OfType<YamlScalarNode>()
+                .Select(s => s.Value ?? "")
+                .Where(s => !string.IsNullOrWhiteSpace(s))
+                .ToList();
+        }
+
+        return new List<string>();
     }
 
     private GroupNode ParseGroupNode(YamlNode node)
@@ -586,6 +671,17 @@ public sealed class YamlWorkflowParser : IWorkflowParser
             return defaultValue;
 
         if (node is YamlScalarNode scalar && bool.TryParse(scalar.Value, out var result))
+            return result;
+
+        return defaultValue;
+    }
+
+    private static double GetDoubleValue(YamlMappingNode mapping, string key, double defaultValue)
+    {
+        if (!mapping.Children.TryGetValue(key, out var node))
+            return defaultValue;
+
+        if (node is YamlScalarNode scalar && double.TryParse(scalar.Value, out var result))
             return result;
 
         return defaultValue;

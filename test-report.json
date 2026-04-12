@@ -1,0 +1,32 @@
+{
+  "schemaVersion": "1.0",
+  "workflow": {
+    "name": "demo_flow",
+    "status": "passed",
+    "startedAt": "2026-04-12T14:27:24.9190902\u002B00:00",
+    "finishedAt": "2026-04-12T14:27:25.1031501\u002B00:00",
+    "durationMs": 184
+  },
+  "summary": {
+    "totalSteps": 1,
+    "passedSteps": 1,
+    "failedSteps": 0,
+    "skippedSteps": 0
+  },
+  "steps": [
+    {
+      "id": "log_start",
+      "keyword": "log.info",
+      "status": "passed",
+      "startedAt": "2026-04-12T14:27:24.9385356\u002B00:00",
+      "finishedAt": "2026-04-12T14:27:25.1028124\u002B00:00",
+      "durationMs": 164,
+      "outputs": {
+        "message": "\u0417\u0430\u043F\u0443\u0441\u043A AutoFlow"
+      },
+      "logs": [
+        "INFO: \u0417\u0430\u043F\u0443\u0441\u043A AutoFlow"
+      ]
+    }
+  ]
+}

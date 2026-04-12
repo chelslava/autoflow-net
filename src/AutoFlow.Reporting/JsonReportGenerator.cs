@@ -1,3 +1,10 @@
+// =============================================================================
+// JsonReportGenerator.cs — генератор JSON отчётов с маскированием секретов.
+//
+// Создаёт детальный отчёт о выполнении workflow с поддержкой маскирования
+// секретных значений в outputs и error messages.
+// =============================================================================
+
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using AutoFlow.Abstractions;
@@ -6,15 +13,21 @@ namespace AutoFlow.Reporting;
 
 public sealed class JsonReportGenerator
 {
+    private readonly SecretMasker? _secretMasker;
     private readonly JsonSerializerOptions _options;
 
-    public JsonReportGenerator()
+    public JsonReportGenerator() : this(null)
     {
+    }
+
+    public JsonReportGenerator(SecretMasker? secretMasker)
+    {
+        _secretMasker = secretMasker;
         _options = new JsonSerializerOptions
         {
             WriteIndented = true,
             PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-            DefaultIgnoreCondition =JsonIgnoreCondition.WhenWritingNull,
+            DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
             Converters =
             {
                 new JsonStringEnumConverter(JsonNamingPolicy.CamelCase)
@@ -50,13 +63,45 @@ public sealed class JsonReportGenerator
                 StartedAt = s.StartedAtUtc.ToString("O"),
                 FinishedAt = s.FinishedAtUtc.ToString("O"),
                 DurationMs = (long)s.Duration.TotalMilliseconds,
-                Outputs = s.Outputs,
-                ErrorMessage = s.ErrorMessage,
-                Logs = s.Logs.Count > 0 ? s.Logs : null
+                Outputs = MaskOutputs(s.Outputs),
+                ErrorMessage = MaskString(s.ErrorMessage),
+                Logs = s.Logs.Count > 0 ? s.Logs.Select(MaskString).Where(l => l is not null).Cast<string>().ToList() : null
             }).ToList()
         };
 
         return JsonSerializer.Serialize(report, _options);
+    }
+
+    private string? MaskString(string? value)
+    {
+        if (string.IsNullOrEmpty(value) || _secretMasker is null)
+            return value;
+
+        return _secretMasker.Mask(value);
+    }
+
+    private object? MaskOutputs(object? outputs)
+    {
+        if (outputs is null || _secretMasker is null)
+            return outputs;
+
+        // Маскируем строковые значения в словарях
+        if (outputs is System.Collections.IDictionary dict)
+        {
+            var maskedDict = new Dictionary<string, object?>();
+            foreach (System.Collections.DictionaryEntry entry in dict)
+            {
+                var key = entry.Key?.ToString() ?? "";
+                maskedDict[key] = entry.Value switch
+                {
+                    string s => _secretMasker.Mask(s),
+                    _ => entry.Value
+                };
+            }
+            return maskedDict;
+        }
+
+        return outputs;
     }
 }
 

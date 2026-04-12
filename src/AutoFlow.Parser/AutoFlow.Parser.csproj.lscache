@@ -60,6 +60,7 @@ obj/Debug/net10.0/
  .NETCoreApp,Version=v10.0.AssemblyAttributes.cs
  AutoFlow.Parser.AssemblyInfo.cs
  AutoFlow.Parser.GlobalUsings.g.cs
+WorkflowLoader.cs
 YamlWorkflowParser.cs
 
 [metadataReferences]

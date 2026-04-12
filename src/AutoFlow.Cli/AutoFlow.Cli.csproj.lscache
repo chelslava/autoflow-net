@@ -16,8 +16,18 @@ lastDtbSucceeded
 
 [properties]
 AssemblyName=autoflow
+CommandLineArgsForDesignTimeEvaluation=-langversion:latest -define:TRACE
+CompilerGeneratedFilesOutputPath=
+MaxSupportedLangVersion=14.0
+ProjectAssetsFile=<PATH>obj/project.assets.json
+RootNamespace=AutoFlow.Cli
+RunAnalyzers=
+RunAnalyzersDuringLiveAnalysis=
+SolutionPath=<PATH>../../AutoFlow.sln
+TargetFrameworkIdentifier=.NETCoreApp
 TargetPath=<PATH>bin/Debug/net10.0/autoflow.dll
 TargetRefPath=<PATH>obj/Debug/net10.0/ref/autoflow.dll
+TemporaryDependencyNodeTargetIdentifier=net10.0
 
 [commandLineArguments]
 /noconfig
@@ -60,7 +70,6 @@ Program.cs
 ../
  AutoFlow.Abstractions/obj/Debug/net10.0/ref/AutoFlow.Abstractions.dll
  AutoFlow.Parser/obj/Debug/net10.0/ref/AutoFlow.Parser.dll
- AutoFlow.PluginModel/obj/Debug/net10.0/ref/AutoFlow.PluginModel.dll
  AutoFlow.Reporting/obj/Debug/net10.0/ref/AutoFlow.Reporting.dll
  AutoFlow.Runtime/obj/Debug/net10.0/ref/AutoFlow.Runtime.dll
  AutoFlow.Validation/obj/Debug/net10.0/ref/AutoFlow.Validation.dll

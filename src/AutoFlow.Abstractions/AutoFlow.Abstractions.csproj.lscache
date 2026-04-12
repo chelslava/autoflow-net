@@ -67,6 +67,8 @@ IKeywordHandler.cs
 IKeywordMetadataProvider.cs
 InputDefinitionNode.cs
 IRuntimeEngine.cs
+ISecretProvider.cs
+IWorkflowLifecycleHook.cs
 IWorkflowNode.cs
 IWorkflowParser.cs
 IWorkflowValidator.cs
@@ -78,15 +80,21 @@ obj/Debug/net10.0/
  .NETCoreApp,Version=v10.0.AssemblyAttributes.cs
  AutoFlow.Abstractions.AssemblyInfo.cs
  AutoFlow.Abstractions.GlobalUsings.g.cs
+OnErrorNode.cs
 OutputDefinitionNode.cs
+ParallelNode.cs
 RetryNode.cs
 RunResult.cs
 RuntimeLaunchOptions.cs
+SecretMasker.cs
+ServiceCollectionExtensions.cs
+StepContext.cs
 StepExecutionResult.cs
 StepNode.cs
 TaskNode.cs
 ValidationError.cs
 ValidationResult.cs
+WorkflowContext.cs
 WorkflowDocument.cs
 
 [metadataReferences]

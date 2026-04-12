@@ -1,3 +1,9 @@
+// =============================================================================
+// Program.cs — CLI entry point для AutoFlow.NET.
+//
+// Регистрирует все сервисы, hooks, secret providers и обрабатывает команды.
+// =============================================================================
+
 using AutoFlow.Abstractions;
 using AutoFlow.Library.Assertions;
 using AutoFlow.Library.Files;
@@ -5,6 +11,7 @@ using AutoFlow.Library.Http;
 using AutoFlow.Parser;
 using AutoFlow.Reporting;
 using AutoFlow.Runtime;
+using AutoFlow.Runtime.Secrets;
 using AutoFlow.Validation;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -18,6 +25,7 @@ builder.Logging.AddConsole();
 
 var registry = new KeywordRegistry();
 
+// Core services
 builder.Services.AddSingleton(registry);
 builder.Services.AddSingleton<KeywordExecutor>();
 builder.Services.AddSingleton<IRuntimeEngine, RuntimeEngine>();
@@ -26,6 +34,16 @@ builder.Services.AddSingleton<WorkflowLoader>();
 builder.Services.AddSingleton<JsonReportGenerator>();
 builder.Services.AddHttpClient<HttpRequestKeyword>();
 
+// Secret management
+builder.Services.AddSingleton<SecretMasker>();
+builder.Services.AddSingleton<ISecretProvider, EnvSecretProvider>();
+builder.Services.AddSingleton<ISecretProvider, FileSecretProvider>();
+builder.Services.AddSingleton<SecretResolver>();
+
+// Lifecycle hooks - регистрируем все реализации из DI
+builder.Services.AddSingleton<WorkflowHookRunner>();
+
+// Keywords
 builder.Services.AddKeywordsFromAssembly(
     typeof(LogInfoKeyword).Assembly,
     (name, handlerType, argsType, category, description) =>
@@ -50,6 +68,10 @@ var fileArgument = new Argument<FileInfo>(
 var outputOption = new Option<FileInfo?>(
     name: "--output",
     description: "Путь для сохранения JSON-отчёта.");
+
+var runIdOption = new Option<string?>(
+    name: "--run-id",
+    description: "Уникальный идентификатор запуска (генерируется автоматически, если не указан).");
 
 var validateCommand = new Command("validate", "Валидирует workflow-файл без выполнения.");
 validateCommand.AddArgument(fileArgument);
@@ -90,8 +112,9 @@ validateCommand.SetHandler((FileInfo file) =>
 var runCommand = new Command("run", "Выполняет workflow-файл.");
 runCommand.AddArgument(fileArgument);
 runCommand.AddOption(outputOption);
+runCommand.AddOption(runIdOption);
 
-runCommand.SetHandler(async (FileInfo file, FileInfo? output) =>
+runCommand.SetHandler(async (FileInfo file, FileInfo? output, string? runId) =>
 {
     if (!file.Exists)
     {
@@ -128,10 +151,12 @@ runCommand.SetHandler(async (FileInfo file, FileInfo? output) =>
     }
 
     Console.WriteLine($"→ Выполняется: {document.Name}");
+    if (!string.IsNullOrEmpty(runId))
+        Console.WriteLine($"  Run ID: {runId}");
 
     var result = await runtime.ExecuteAsync(
         document,
-        new RuntimeLaunchOptions());
+        new RuntimeLaunchOptions { RunId = runId });
 
     var statusIcon = result.Status == ExecutionStatus.Passed ? "✓" : "✗";
     Console.WriteLine($"{statusIcon} Workflow: {result.WorkflowName}");
@@ -153,7 +178,7 @@ runCommand.SetHandler(async (FileInfo file, FileInfo? output) =>
         await File.WriteAllTextAsync(output.FullName, json);
         Console.WriteLine($"  Отчёт: {output.FullName}");
     }
-}, fileArgument, outputOption);
+}, fileArgument, outputOption, runIdOption);
 
 var listKeywordsCommand = new Command("list-keywords", "Выводит список доступных keywords.");
 listKeywordsCommand.SetHandler(() =>

@@ -57,6 +57,9 @@ TemporaryDependencyNodeTargetIdentifier=net10.0
 
 [sourceFiles]
 ExecutionContext.cs
+Hooks/
+ LoggingHook.cs
+ MetricsHook.cs
 KeywordExecutor.cs
 KeywordRegistration.cs
 KeywordRegistry.cs
@@ -65,7 +68,13 @@ obj/Debug/net10.0/
  AutoFlow.Runtime.AssemblyInfo.cs
  AutoFlow.Runtime.GlobalUsings.g.cs
 RuntimeEngine.cs
+SecretResolver.cs
+Secrets/
+ CompositeSecretProvider.cs
+ EnvSecretProvider.cs
+ FileSecretProvider.cs
 VariableResolver.cs
+WorkflowHookRunner.cs
 
 [metadataReferences]
 ../AutoFlow.Abstractions/obj/Debug/net10.0/ref/AutoFlow.Abstractions.dll
