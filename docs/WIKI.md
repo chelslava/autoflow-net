@@ -1809,6 +1809,476 @@ tasks:
 
 ---
 
+## Browser Keywords
+
+AutoFlow.NET включает библиотеку браузерной автоматизации на базе Playwright .NET.
+
+### browser.open
+
+Открывает браузер и создаёт новую страницу.
+
+```yaml
+- step:
+    id: open_browser
+    uses: browser.open
+    with:
+      browser: chromium          # chromium | firefox | webkit
+      headless: true             # true для фонового режима
+      width: 1920
+      height: 1080
+      slowMo: false              # замедление для отладки
+    save_as:
+      browserId: browser_id
+```
+
+**Параметры:**
+- `browser` (string) — тип браузера: `chromium`, `firefox`, `webkit` (по умолчанию: `chromium`)
+- `headless` (bool) — фоновый режим без UI (по умолчанию: `true`)
+- `width` (int, optional) — ширина viewport
+- `height` (int, optional) — высота viewport
+- `slowMo` (bool) — замедление действий для отладки (по умолчанию: `false`)
+
+**Результат:**
+- `browserId` (string) — идентификатор браузера для последующих операций
+- `browser` (string) — тип браузера
+- `headless` (bool) — режим запуска
+- `width` (int) — ширина viewport
+- `height` (int) — высота viewport
+
+---
+
+### browser.close
+
+Закрывает браузер.
+
+```yaml
+- step:
+    id: close_browser
+    uses: browser.close
+    with:
+      browserId: "${browser_id}"
+```
+
+**Параметры:**
+- `browserId` (string) — идентификатор браузера
+
+**Результат:**
+- `browserId` (string) — идентификатор закрытого браузера
+- `closed` (bool) — `true` если браузер закрыт
+
+---
+
+### browser.goto
+
+Навигирует на указанный URL.
+
+```yaml
+- step:
+    id: navigate
+    uses: browser.goto
+    with:
+      browserId: "${browser_id}"
+      url: "https://example.com"
+      timeoutMs: 30000
+      waitUntilLoad: true
+    save_as:
+      title: page_title
+```
+
+**Параметры:**
+- `browserId` (string) — идентификатор браузера
+- `url` (string) — URL для навигации
+- `timeoutMs` (int, optional) — таймаут в миллисекундах
+- `waitUntilLoad` (bool) — ждать полной загрузки страницы (по умолчанию: `true`)
+
+**Результат:**
+- `url` (string) — итоговый URL (после редиректов)
+- `title` (string) — заголовок страницы
+- `statusCode` (int, optional) — HTTP статус код
+- `statusText` (string, optional) — HTTP статус текст
+
+---
+
+### browser.click
+
+Кликает по элементу.
+
+```yaml
+- step:
+    id: click_button
+    uses: browser.click
+    with:
+      browserId: "${browser_id}"
+      selector: "button.submit"
+      timeoutMs: 5000
+      force: false
+      delayMs: 0
+```
+
+**Параметры:**
+- `browserId` (string) — идентификатор браузера
+- `selector` (string) — CSS-селектор элемента
+- `timeoutMs` (int, optional) — таймаут ожидания элемента
+- `force` (bool) — пропустить проверки видимости (по умолчанию: `false`)
+- `delayMs` (int, optional) — задержка между mousedown и mouseup
+
+**Результат:**
+- `selector` (string) — селектор элемента
+- `clicked` (bool) — `true` если клик выполнен
+
+---
+
+### browser.fill
+
+Заполняет поле ввода.
+
+```yaml
+- step:
+    id: fill_input
+    uses: browser.fill
+    with:
+      browserId: "${browser_id}"
+      selector: "input[name='email']"
+      value: "user@example.com"
+      timeoutMs: 5000
+```
+
+**Параметры:**
+- `browserId` (string) — идентификатор браузера
+- `selector` (string) — CSS-селектор элемента
+- `value` (string) — значение для ввода
+- `timeoutMs` (int, optional) — таймаут ожидания элемента
+- `clear` (bool) — очистить поле перед вводом (по умолчанию: `true`)
+
+**Результат:**
+- `selector` (string) — селектор элемента
+- `value` (string) — введённое значение
+- `filled` (bool) — `true` если поле заполнено
+
+---
+
+### browser.wait
+
+Ожидает появление элемента.
+
+```yaml
+- step:
+    id: wait_element
+    uses: browser.wait
+    with:
+      browserId: "${browser_id}"
+      selector: ".result"
+      state: visible             # visible | hidden | attached | detached
+      timeoutMs: 10000
+```
+
+**Параметры:**
+- `browserId` (string) — идентификатор браузера
+- `selector` (string) — CSS-селектор элемента
+- `state` (string) — ожидаемое состояние: `visible`, `hidden`, `attached`, `detached` (по умолчанию: `visible`)
+- `timeoutMs` (int, optional) — таймаут ожидания
+
+**Результат:**
+- `selector` (string) — селектор элемента
+- `state` (string) — ожидаемое состояние
+- `found` (bool) — `true` если элемент найден
+
+---
+
+### browser.get_text
+
+Получает текст элемента.
+
+```yaml
+- step:
+    id: get_text
+    uses: browser.get_text
+    with:
+      browserId: "${browser_id}"
+      selector: ".product-title"
+      timeoutMs: 5000
+    save_as:
+      text: product_name
+```
+
+**Параметры:**
+- `browserId` (string) — идентификатор браузера
+- `selector` (string) — CSS-селектор элемента
+- `timeoutMs` (int, optional) — таймаут ожидания элемента
+
+**Результат:**
+- `selector` (string) — селектор элемента
+- `text` (string) — текст элемента
+
+---
+
+### browser.assert_text
+
+Проверяет текст на странице или в элементе.
+
+```yaml
+- step:
+    id: check_text
+    uses: browser.assert_text
+    with:
+      browserId: "${browser_id}"
+      selector: ".message"       # опционально, по умолчанию проверяет всю страницу
+      expected: "Success"
+      contains: true             # true = содержит, false = точное совпадение
+      timeoutMs: 5000
+```
+
+**Параметры:**
+- `browserId` (string) — идентификатор браузера
+- `selector` (string, optional) — CSS-селектор элемента (если не указан, проверяет всю страницу)
+- `expected` (string) — ожидаемый текст
+- `contains` (bool) — режим проверки: содержимое или точное совпадение (по умолчанию: `true`)
+- `timeoutMs` (int, optional) — таймаут ожидания элемента
+
+**Результат:**
+- `selector` (string) — селектор элемента
+- `expected` (string) — ожидаемый текст
+- `actual` (string) — фактический текст
+- `contains` (bool) — режим проверки
+- `passed` (bool) — `true` если проверка пройдена
+
+---
+
+### browser.assert_visible
+
+Проверяет видимость элемента.
+
+```yaml
+- step:
+    id: check_visible
+    uses: browser.assert_visible
+    with:
+      browserId: "${browser_id}"
+      selector: ".success-badge"
+      timeoutMs: 5000
+```
+
+**Параметры:**
+- `browserId` (string) — идентификатор браузера
+- `selector` (string) — CSS-селектор элемента
+- `timeoutMs` (int, optional) — таймаут ожидания элемента
+
+**Результат:**
+- `selector` (string) — селектор элемента
+- `visible` (bool) — `true` если элемент виден
+
+---
+
+### browser.hover
+
+Наводит курсор на элемент.
+
+```yaml
+- step:
+    id: hover_menu
+    uses: browser.hover
+    with:
+      browserId: "${browser_id}"
+      selector: ".dropdown-toggle"
+      timeoutMs: 5000
+      force: false
+```
+
+**Параметры:**
+- `browserId` (string) — идентификатор браузера
+- `selector` (string) — CSS-селектор элемента
+- `timeoutMs` (int, optional) — таймаут ожидания элемента
+- `force` (bool) — пропустить проверки видимости (по умолчанию: `false`)
+
+**Результат:**
+- `selector` (string) — селектор элемента
+- `hovered` (bool) — `true` если наведение выполнено
+
+---
+
+### browser.press
+
+Нажимает клавиши.
+
+```yaml
+- step:
+    id: press_enter
+    uses: browser.press
+    with:
+      browserId: "${browser_id}"
+      key: Enter                 # или "Control+A", "ArrowDown"
+      selector: "input.search"   # опционально
+      delayMs: 100
+```
+
+**Параметры:**
+- `browserId` (string) — идентификатор браузера
+- `key` (string) — клавиша или комбинация: `Enter`, `Escape`, `Tab`, `ArrowDown`, `Control+A`, etc.
+- `selector` (string, optional) — CSS-селектор элемента для фокуса
+- `delayMs` (int, optional) — задержка между нажатиями
+
+**Результат:**
+- `key` (string) — нажатая клавиша
+- `selector` (string, optional) — селектор элемента
+- `pressed` (bool) — `true` если нажатие выполнено
+
+---
+
+### browser.evaluate
+
+Выполняет JavaScript в браузере.
+
+```yaml
+- step:
+    id: execute_js
+    uses: browser.evaluate
+    with:
+      browserId: "${browser_id}"
+      script: "return document.title"
+    save_as:
+      result: page_title
+```
+
+**Параметры:**
+- `browserId` (string) — идентификатор браузера
+- `script` (string) — JavaScript код для выполнения
+- `arg` (any, optional) — аргумент для передачи в скрипт
+
+**Результат:**
+- `result` (any) — результат выполнения скрипта
+
+---
+
+### browser.screenshot
+
+Делает скриншот страницы или элемента.
+
+```yaml
+- step:
+    id: take_screenshot
+    uses: browser.screenshot
+    with:
+      browserId: "${browser_id}"
+      path: "screenshots/result.png"
+      fullPage: true
+      # selector: ".element"     # опционально для скриншота элемента
+```
+
+**Параметры:**
+- `browserId` (string) — идентификатор браузера
+- `path` (string) — путь для сохранения скриншота
+- `fullPage` (bool) — скриншот всей страницы (по умолчанию: `false`)
+- `selector` (string, optional) — CSS-селектор элемента для скриншота
+
+**Результат:**
+- `path` (string) — путь к скриншоту
+- `size` (int) — размер файла в байтах
+- `fullPage` (bool) — был ли скриншот всей страницы
+- `selector` (string, optional) — селектор элемента
+
+---
+
+### Полный пример Browser Automation
+
+```yaml
+schema_version: 1
+name: browser_login_test
+
+variables:
+  test_url: "https://example.com/login"
+  username: "testuser"
+  password: "testpass"
+
+tasks:
+  main:
+    steps:
+      - step:
+          id: open
+          uses: browser.open
+          with:
+            browser: chromium
+            headless: true
+            width: 1920
+            height: 1080
+          save_as:
+            browserId: browser_id
+
+      - step:
+          id: navigate
+          uses: browser.goto
+          with:
+            browserId: "${browser_id}"
+            url: "${test_url}"
+
+      - step:
+          id: fill_username
+          uses: browser.fill
+          with:
+            browserId: "${browser_id}"
+            selector: "input[name='username']"
+            value: "${username}"
+
+      - step:
+          id: fill_password
+          uses: browser.fill
+          with:
+            browserId: "${browser_id}"
+            selector: "input[name='password']"
+            value: "${password}"
+
+      - step:
+          id: submit
+          uses: browser.click
+          with:
+            browserId: "${browser_id}"
+            selector: "button[type='submit']"
+
+      - step:
+          id: wait_dashboard
+          uses: browser.wait
+          with:
+            browserId: "${browser_id}"
+            selector: ".dashboard"
+            state: visible
+            timeoutMs: 10000
+
+      - step:
+          id: assert_welcome
+          uses: browser.assert_text
+          with:
+            browserId: "${browser_id}"
+            selector: ".welcome-message"
+            expected: "Welcome"
+            contains: true
+
+      - step:
+          id: screenshot
+          uses: browser.screenshot
+          with:
+            browserId: "${browser_id}"
+            path: "reports/dashboard.png"
+            fullPage: false
+
+      - step:
+          id: close
+          uses: browser.close
+          with:
+            browserId: "${browser_id}"
+```
+
+---
+      value: user_name
+```
+
+**Параметры:**
+- `json` (string) — JSON строка для парсинга
+- `path` (string) — JSONPath выражение
+
+**Результат:**
+- `value` (any) — извлечённое значение
+
+---
+
 ## Полный пример
 
 ```yaml
