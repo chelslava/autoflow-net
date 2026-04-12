@@ -1,0 +1,92 @@
+schema_version: 1
+name: browser_login_example
+
+variables:
+  login_url: "https://the-internet.herokuapp.com/login"
+  username: "tomsmith"
+  password: "SuperSecretPassword!"
+
+tasks:
+  main:
+    on_error:
+      - step:
+          id: error_screenshot
+          uses: browser.screenshot
+          with:
+            browserId: "${browser_id}"
+            path: "reports/error.png"
+
+    finally:
+      - step:
+          id: close_browser
+          uses: browser.close
+          with:
+            browserId: "${browser_id}"
+
+    steps:
+      - step:
+          id: open_browser
+          uses: browser.open
+          with:
+            browser: chromium
+            headless: true
+            width: 1280
+            height: 720
+          save_as:
+            browserId: browser_id
+
+      - step:
+          id: navigate_login
+          uses: browser.goto
+          with:
+            browserId: "${browser_id}"
+            url: "${login_url}"
+
+      - step:
+          id: fill_username
+          uses: browser.fill
+          with:
+            browserId: "${browser_id}"
+            selector: "input#username"
+            value: "${username}"
+
+      - step:
+          id: fill_password
+          uses: browser.fill
+          with:
+            browserId: "${browser_id}"
+            selector: "input#password"
+            value: "${password}"
+
+      - step:
+          id: click_login
+          uses: browser.click
+          with:
+            browserId: "${browser_id}"
+            selector: "button[type='submit']"
+
+      - step:
+          id: wait_success
+          uses: browser.wait
+          with:
+            browserId: "${browser_id}"
+            selector: ".flash.success"
+            state: visible
+            timeoutMs: 5000
+
+      - step:
+          id: assert_success
+          uses: browser.assert_text
+          with:
+            browserId: "${browser_id}"
+            selector: ".flash.success"
+            expected: "You logged into a secure area!"
+            contains: true
+
+      - step:
+          id: take_screenshot
+          uses: browser.screenshot
+          with:
+            browserId: "${browser_id}"
+            path: "reports/login_success.png"
+            fullPage: false

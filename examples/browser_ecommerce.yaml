@@ -1,0 +1,97 @@
+schema_version: 1
+name: browser_ecommerce_example
+
+variables:
+  base_url: "https://www.saucedemo.com"
+
+tasks:
+  main:
+    steps:
+      - step:
+          id: open
+          uses: browser.open
+          with:
+            browser: chromium
+            headless: true
+          save_as:
+            browserId: browser_id
+
+      - step:
+          id: goto_site
+          uses: browser.goto
+          with:
+            browserId: "${browser_id}"
+            url: "${base_url}"
+
+      - step:
+          id: login
+          uses: browser.fill
+          with:
+            browserId: "${browser_id}"
+            selector: "input[data-test='username']"
+            value: "standard_user"
+
+      - step:
+          id: password
+          uses: browser.fill
+          with:
+            browserId: "${browser_id}"
+            selector: "input[data-test='password']"
+            value: "secret_sauce"
+
+      - step:
+          id: submit
+          uses: browser.click
+          with:
+            browserId: "${browser_id}"
+            selector: "input[data-test='login-button']"
+
+      - step:
+          id: wait_inventory
+          uses: browser.wait
+          with:
+            browserId: "${browser_id}"
+            selector: ".inventory_list"
+            timeoutMs: 5000
+
+      - step:
+          id: add_to_cart
+          uses: browser.click
+          with:
+            browserId: "${browser_id}"
+            selector: "button[data-test='add-to-cart-sauce-labs-backpack']"
+
+      - step:
+          id: check_cart_badge
+          uses: browser.assert_text
+          with:
+            browserId: "${browser_id}"
+            selector: ".shopping_cart_badge"
+            expected: "1"
+
+      - step:
+          id: goto_cart
+          uses: browser.click
+          with:
+            browserId: "${browser_id}"
+            selector: ".shopping_cart_link"
+
+      - step:
+          id: verify_item
+          uses: browser.assert_visible
+          with:
+            browserId: "${browser_id}"
+            selector: ".cart_item"
+
+      - step:
+          id: screenshot_cart
+          uses: browser.screenshot
+          with:
+            browserId: "${browser_id}"
+            path: "reports/cart.png"
+
+      - step:
+          id: close
+          uses: browser.close
+          with:
+            browserId: "${browser_id}"

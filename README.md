@@ -13,7 +13,8 @@
 - **Secrets Management** — безопасная работа с секретами, маскирование в логах
 - **Lifecycle Hooks** — расширяемая система событий workflow
 - **Error Handling** — on_error/finally блоки на уровне task
-- **Reports** — JSON-отчёты о выполнении с маскированием секретов
+- **Reports** — JSON и HTML отчёты о выполнении с маскированием секретов
+- **Browser Automation** — Playwright-based браузерная автоматизация
 
 ## Установка
 
@@ -37,7 +38,14 @@ dotnet run --project src/AutoFlow.Cli -- run examples/flow.yaml
 С сохранением отчёта:
 
 ```bash
+# JSON отчёт
 dotnet run --project src/AutoFlow.Cli -- run examples/flow.yaml --output report.json
+
+# HTML отчёт (определяется по расширению)
+dotnet run --project src/AutoFlow.Cli -- run examples/flow.yaml --output report.html
+
+# Явное указание формата
+dotnet run --project src/AutoFlow.Cli -- run examples/flow.yaml --output report.txt --format html
 ```
 
 С указанием Run ID:
@@ -214,6 +222,8 @@ services.AddSingleton<IWorkflowLifecycleHook, MyHook>();
 
 ## Доступные Keywords
 
+### Logging & Files
+
 | Keyword | Описание |
 |---------|----------|
 | `log.info` | Записывает сообщение в лог |
@@ -221,8 +231,81 @@ services.AddSingleton<IWorkflowLifecycleHook, MyHook>();
 | `files.write` | Записывает строку в файл |
 | `files.exists` | Проверяет существование файла |
 | `files.delete` | Удаляет файл |
+
+### HTTP & JSON
+
+| Keyword | Описание |
+|---------|----------|
 | `http.request` | Выполняет HTTP-запрос |
 | `json.parse` | Парсит JSON и извлекает значение |
+
+### Browser Automation
+
+| Keyword | Описание |
+|---------|----------|
+| `browser.open` | Открывает браузер (Chromium/Firefox/WebKit) |
+| `browser.close` | Закрывает браузер |
+| `browser.goto` | Навигирует на URL |
+| `browser.click` | Кликает по элементу |
+| `browser.fill` | Заполняет поле ввода |
+| `browser.wait` | Ожидает появление элемента |
+| `browser.get_text` | Получает текст элемента |
+| `browser.assert_text` | Проверяет текст на странице |
+| `browser.assert_visible` | Проверяет видимость элемента |
+| `browser.hover` | Наводит курсор на элемент |
+| `browser.press` | Нажимает клавиши |
+| `browser.evaluate` | Выполняет JavaScript |
+| `browser.screenshot` | Делает скриншот страницы |
+
+## Browser Automation Example
+
+```yaml
+schema_version: 1
+name: browser_test
+
+variables:
+  test_url: "https://example.com"
+
+tasks:
+  main:
+    steps:
+      - step:
+          id: open
+          uses: browser.open
+          with:
+            browser: chromium
+            headless: true
+          save_as:
+            browserId: browser_id
+
+      - step:
+          id: navigate
+          uses: browser.goto
+          with:
+            browserId: "${browser_id}"
+            url: "${test_url}"
+
+      - step:
+          id: check_title
+          uses: browser.assert_text
+          with:
+            browserId: "${browser_id}"
+            selector: "h1"
+            expected: "Example Domain"
+
+      - step:
+          id: screenshot
+          uses: browser.screenshot
+          with:
+            browserId: "${browser_id}"
+            path: "reports/screenshot.png"
+
+      - step:
+          id: close
+          uses: browser.close
+          with:
+            browserId: "${browser_id}"
+```
 
 ## Структура проекта
 

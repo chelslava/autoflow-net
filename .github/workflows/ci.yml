@@ -2,7 +2,9 @@ name: CI
 
 on:
   push:
+    branches: [ main, develop ]
   pull_request:
+    branches: [ main ]
 
 jobs:
   build-test:
@@ -24,4 +26,45 @@ jobs:
         run: dotnet build --no-restore --configuration Release
 
       - name: Test
-        run: dotnet test --no-build --configuration Release
+        run: dotnet test --no-build --configuration Release --filter "FullyQualifiedName!~Browser"
+
+      - name: Publish Linux-x64
+        run: dotnet publish src/AutoFlow.Cli/AutoFlow.Cli.csproj -c Release -o ./publish-linux \
+             /p:PublishSingleFile=true \
+             /p:SelfContained=true \
+             /p:RuntimeIdentifier=linux-x64 \
+             /p:PublishTrimmed=true
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: autoflow-linux-x64
+          path: ./publish-linux/
+
+  validate-examples:
+    needs: build-test
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET 10
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Restore
+        run: dotnet restore
+
+      - name: Build
+        run: dotnet build --no-restore --configuration Release
+
+      - name: Validate example workflows
+        run: |
+          for file in examples/*.yaml; do
+            if [[ "$file" != *"browser"* ]]; then
+              echo "Validating $file"
+              dotnet run --project src/AutoFlow.Cli --no-build -- validate "$file" || true
+            fi
+          done

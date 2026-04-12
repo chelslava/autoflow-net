@@ -1,0 +1,31 @@
+version: '3.8'
+
+services:
+  autoflow:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: autoflow-net:latest
+    container_name: autoflow
+    volumes:
+      - ./workflows:/workflows:ro
+      - ./reports:/reports
+    environment:
+      - AUTOFLOW_WORKFLOWS_DIR=/workflows
+      - AUTOFLOW_REPORTS_DIR=/reports
+    command: ["run", "/workflows/flow.yaml", "--output", "/reports/report.json"]
+
+  # Example service for running browser tests
+  autoflow-browser:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: autoflow-net:latest
+    container_name: autoflow-browser
+    volumes:
+      - ./examples:/workflows:ro
+      - ./reports:/reports
+    environment:
+      - AUTOFLOW_REPORTS_DIR=/reports
+    command: ["run", "/workflows/browser_login.yaml", "--output", "/reports/browser-report.html", "--format", "html"]
+    # Note: Browser automation requires additional setup for headless mode
