@@ -33,6 +33,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AutoFlow.Library.Files", "l
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AutoFlow.Library.Http", "libraries\AutoFlow.Library.Http\AutoFlow.Library.Http.csproj", "{89DEE376-0E0D-42B2-BF58-A2339C4A22B2}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AutoFlow.Reporting", "src\AutoFlow.Reporting\AutoFlow.Reporting.csproj", "{3A472787-2A38-422E-AD35-FCF89E0E16D1}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -187,6 +189,18 @@ Global
 		{89DEE376-0E0D-42B2-BF58-A2339C4A22B2}.Release|x64.Build.0 = Release|Any CPU
 		{89DEE376-0E0D-42B2-BF58-A2339C4A22B2}.Release|x86.ActiveCfg = Release|Any CPU
 		{89DEE376-0E0D-42B2-BF58-A2339C4A22B2}.Release|x86.Build.0 = Release|Any CPU
+		{3A472787-2A38-422E-AD35-FCF89E0E16D1}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{3A472787-2A38-422E-AD35-FCF89E0E16D1}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{3A472787-2A38-422E-AD35-FCF89E0E16D1}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{3A472787-2A38-422E-AD35-FCF89E0E16D1}.Debug|x64.Build.0 = Debug|Any CPU
+		{3A472787-2A38-422E-AD35-FCF89E0E16D1}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{3A472787-2A38-422E-AD35-FCF89E0E16D1}.Debug|x86.Build.0 = Debug|Any CPU
+		{3A472787-2A38-422E-AD35-FCF89E0E16D1}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{3A472787-2A38-422E-AD35-FCF89E0E16D1}.Release|Any CPU.Build.0 = Release|Any CPU
+		{3A472787-2A38-422E-AD35-FCF89E0E16D1}.Release|x64.ActiveCfg = Release|Any CPU
+		{3A472787-2A38-422E-AD35-FCF89E0E16D1}.Release|x64.Build.0 = Release|Any CPU
+		{3A472787-2A38-422E-AD35-FCF89E0E16D1}.Release|x86.ActiveCfg = Release|Any CPU
+		{3A472787-2A38-422E-AD35-FCF89E0E16D1}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -197,5 +211,6 @@ Global
 		{0BD4EC67-3B75-4CFD-BCD8-002B238DC7E2} = {0AB3BF05-4346-4AA6-1389-037BE0695223}
 		{1E9F468B-CB12-4D31-9087-DF0D76746A8C} = {F2E35B3E-9711-EDEC-6202-DB40BDEED14A}
 		{89DEE376-0E0D-42B2-BF58-A2339C4A22B2} = {F2E35B3E-9711-EDEC-6202-DB40BDEED14A}
+		{3A472787-2A38-422E-AD35-FCF89E0E16D1} = {827E0CD3-B72D-47B6-A68D-7590B98EB39B}
 	EndGlobalSection
 EndGlobal

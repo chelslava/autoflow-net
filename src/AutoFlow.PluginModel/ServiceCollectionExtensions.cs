@@ -1,4 +1,3 @@
-// Этот код нужен для автоматической регистрации keyword-обработчиков из сборки.
 using System;
 using System.Linq;
 using System.Reflection;
@@ -12,7 +11,7 @@ public static class ServiceCollectionExtensions
     public static IServiceCollection AddKeywordsFromAssembly(
         this IServiceCollection services,
         Assembly assembly,
-        Action<string, Type, Type> registerKeyword)
+        Action<string, Type, Type, string?, string?> registerKeyword)
     {
         var handlerTypes = assembly.GetTypes()
             .Where(t => t is { IsAbstract: false, IsInterface: false })
@@ -32,7 +31,13 @@ public static class ServiceCollectionExtensions
         {
             var argsType = item.HandlerInterface!.GetGenericArguments()[0];
 
-            registerKeyword(item.Attribute!.Name, item.Type, argsType);
+            registerKeyword(
+                item.Attribute!.Name,
+                item.Type,
+                argsType,
+                item.Attribute.Category,
+                item.Attribute.Description);
+
             services.AddTransient(item.Type);
         }
 

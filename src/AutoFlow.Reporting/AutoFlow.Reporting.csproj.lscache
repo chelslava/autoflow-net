@@ -15,9 +15,19 @@ primary
 lastDtbSucceeded
 
 [properties]
-AssemblyName=autoflow
-TargetPath=<PATH>bin/Debug/net10.0/autoflow.dll
-TargetRefPath=<PATH>obj/Debug/net10.0/ref/autoflow.dll
+AssemblyName=AutoFlow.Reporting
+CommandLineArgsForDesignTimeEvaluation=-langversion:latest -define:TRACE
+CompilerGeneratedFilesOutputPath=
+MaxSupportedLangVersion=14.0
+ProjectAssetsFile=<PATH>obj/project.assets.json
+RootNamespace=AutoFlow.Reporting
+RunAnalyzers=
+RunAnalyzersDuringLiveAnalysis=
+SolutionPath=<PATH>../../AutoFlow.sln
+TargetFrameworkIdentifier=.NETCoreApp
+TargetPath=<PATH>bin/Debug/net10.0/AutoFlow.Reporting.dll
+TargetRefPath=<PATH>obj/Debug/net10.0/ref/AutoFlow.Reporting.dll
+TemporaryDependencyNodeTargetIdentifier=net10.0
 
 [commandLineArguments]
 /noconfig
@@ -36,34 +46,24 @@ TargetRefPath=<PATH>obj/Debug/net10.0/ref/autoflow.dll
 /debug:portable
 /filealign:512
 /optimize-
-/out:obj\Debug\net10.0\autoflow.dll
-/refout:obj\Debug\net10.0\refint\autoflow.dll
-/target:exe
-/warnaserror+
+/out:obj\Debug\net10.0\AutoFlow.Reporting.dll
+/refout:obj\Debug\net10.0\refint\AutoFlow.Reporting.dll
+/target:library
+/warnaserror-
 /utf8output
 /deterministic+
 /langversion:latest
 /warnaserror+:NU1605,SYSLIB0011
 
 [sourceFiles]
+JsonReportGenerator.cs
 obj/Debug/net10.0/
  .NETCoreApp,Version=v10.0.AssemblyAttributes.cs
- AutoFlow.Cli.AssemblyInfo.cs
- AutoFlow.Cli.GlobalUsings.g.cs
-Program.cs
+ AutoFlow.Reporting.AssemblyInfo.cs
+ AutoFlow.Reporting.GlobalUsings.g.cs
 
 [metadataReferences]
-../../libraries/
- AutoFlow.Library.Assertions/obj/Debug/net10.0/ref/AutoFlow.Library.Assertions.dll
- AutoFlow.Library.Files/obj/Debug/net10.0/ref/AutoFlow.Library.Files.dll
- AutoFlow.Library.Http/obj/Debug/net10.0/ref/AutoFlow.Library.Http.dll
-../
- AutoFlow.Abstractions/obj/Debug/net10.0/ref/AutoFlow.Abstractions.dll
- AutoFlow.Parser/obj/Debug/net10.0/ref/AutoFlow.Parser.dll
- AutoFlow.PluginModel/obj/Debug/net10.0/ref/AutoFlow.PluginModel.dll
- AutoFlow.Reporting/obj/Debug/net10.0/ref/AutoFlow.Reporting.dll
- AutoFlow.Runtime/obj/Debug/net10.0/ref/AutoFlow.Runtime.dll
- AutoFlow.Validation/obj/Debug/net10.0/ref/AutoFlow.Validation.dll
+../AutoFlow.Abstractions/obj/Debug/net10.0/ref/AutoFlow.Abstractions.dll
 <DOTNET>/packs/Microsoft.NETCore.App.Ref/10.0.5/ref/net10.0/
  Microsoft.CSharp.dll
  Microsoft.VisualBasic.Core.dll
@@ -233,37 +233,8 @@ Program.cs
  System.Xml.XPath.XDocument.dll
  WindowsBase.dll
 <NUGET>/
- microsoft.extensions.configuration.abstractions/10.0.5/lib/net10.0/Microsoft.Extensions.Configuration.Abstractions.dll
- microsoft.extensions.configuration.binder/10.0.5/lib/net10.0/Microsoft.Extensions.Configuration.Binder.dll
- microsoft.extensions.configuration.commandline/10.0.0/lib/net10.0/Microsoft.Extensions.Configuration.CommandLine.dll
- microsoft.extensions.configuration.environmentvariables/10.0.0/lib/net10.0/Microsoft.Extensions.Configuration.EnvironmentVariables.dll
- microsoft.extensions.configuration.fileextensions/10.0.0/lib/net10.0/Microsoft.Extensions.Configuration.FileExtensions.dll
- microsoft.extensions.configuration.json/10.0.0/lib/net10.0/Microsoft.Extensions.Configuration.Json.dll
- microsoft.extensions.configuration.usersecrets/10.0.0/lib/net10.0/Microsoft.Extensions.Configuration.UserSecrets.dll
- microsoft.extensions.configuration/10.0.5/lib/net10.0/Microsoft.Extensions.Configuration.dll
- microsoft.extensions.dependencyinjection.abstractions/10.0.5/lib/net10.0/Microsoft.Extensions.DependencyInjection.Abstractions.dll
- microsoft.extensions.dependencyinjection/10.0.5/lib/net10.0/Microsoft.Extensions.DependencyInjection.dll
- microsoft.extensions.diagnostics.abstractions/10.0.5/lib/net10.0/Microsoft.Extensions.Diagnostics.Abstractions.dll
- microsoft.extensions.diagnostics/10.0.5/lib/net10.0/Microsoft.Extensions.Diagnostics.dll
- microsoft.extensions.fileproviders.abstractions/10.0.0/lib/net10.0/Microsoft.Extensions.FileProviders.Abstractions.dll
- microsoft.extensions.fileproviders.physical/10.0.0/lib/net10.0/Microsoft.Extensions.FileProviders.Physical.dll
- microsoft.extensions.filesystemglobbing/10.0.0/lib/net10.0/Microsoft.Extensions.FileSystemGlobbing.dll
- microsoft.extensions.hosting.abstractions/10.0.0/lib/net10.0/Microsoft.Extensions.Hosting.Abstractions.dll
- microsoft.extensions.hosting/10.0.0/lib/net10.0/Microsoft.Extensions.Hosting.dll
- microsoft.extensions.http/10.0.5/lib/net10.0/Microsoft.Extensions.Http.dll
- microsoft.extensions.logging.abstractions/10.0.5/lib/net10.0/Microsoft.Extensions.Logging.Abstractions.dll
- microsoft.extensions.logging.configuration/10.0.0/lib/net10.0/Microsoft.Extensions.Logging.Configuration.dll
- microsoft.extensions.logging.console/10.0.0/lib/net10.0/Microsoft.Extensions.Logging.Console.dll
- microsoft.extensions.logging.debug/10.0.0/lib/net10.0/Microsoft.Extensions.Logging.Debug.dll
- microsoft.extensions.logging.eventlog/10.0.0/lib/net10.0/Microsoft.Extensions.Logging.EventLog.dll
- microsoft.extensions.logging.eventsource/10.0.0/lib/net10.0/Microsoft.Extensions.Logging.EventSource.dll
- microsoft.extensions.logging/10.0.5/lib/net10.0/Microsoft.Extensions.Logging.dll
- microsoft.extensions.options.configurationextensions/10.0.5/lib/net10.0/Microsoft.Extensions.Options.ConfigurationExtensions.dll
- microsoft.extensions.options/10.0.5/lib/net10.0/Microsoft.Extensions.Options.dll
- microsoft.extensions.primitives/10.0.5/lib/net10.0/Microsoft.Extensions.Primitives.dll
- system.commandline/2.0.0-beta4.22272.1/lib/net6.0/System.CommandLine.dll
- system.diagnostics.eventlog/10.0.0/lib/net10.0/System.Diagnostics.EventLog.dll
- yamldotnet/16.3.0/lib/net8.0/YamlDotNet.dll
+ microsoft.extensions.dependencyinjection.abstractions/10.0.0/lib/net10.0/Microsoft.Extensions.DependencyInjection.Abstractions.dll
+ microsoft.extensions.logging.abstractions/10.0.0/lib/net10.0/Microsoft.Extensions.Logging.Abstractions.dll
 
 [analyzerReferences]
 <DOTNET>/packs/Microsoft.NETCore.App.Ref/10.0.5/analyzers/dotnet/cs/
@@ -276,11 +247,9 @@ Program.cs
 <DOTNET>/sdk/10.0.201/Sdks/Microsoft.NET.Sdk/analyzers/
  Microsoft.CodeAnalysis.CSharp.NetAnalyzers.dll
  Microsoft.CodeAnalysis.NetAnalyzers.dll
-<NUGET>/
- microsoft.extensions.logging.abstractions/10.0.5/analyzers/dotnet/roslyn4.4/cs/Microsoft.Extensions.Logging.Generators.dll
- microsoft.extensions.options/10.0.5/analyzers/dotnet/roslyn4.4/cs/Microsoft.Extensions.Options.SourceGeneration.dll
+<NUGET>/microsoft.extensions.logging.abstractions/10.0.0/analyzers/dotnet/roslyn4.4/cs/Microsoft.Extensions.Logging.Generators.dll
 
 [analyzerConfigFiles]
 ../../.editorconfig
 <DOTNET>/sdk/10.0.201/Sdks/Microsoft.NET.Sdk/analyzers/build/config/analysislevel_10_default.globalconfig
-obj/Debug/net10.0/AutoFlow.Cli.GeneratedMSBuildEditorConfig.editorconfig
+obj/Debug/net10.0/AutoFlow.Reporting.GeneratedMSBuildEditorConfig.editorconfig
