@@ -32,6 +32,7 @@ builder.Services.AddSingleton<IRuntimeEngine, RuntimeEngine>();
 builder.Services.AddSingleton<IWorkflowParser, YamlWorkflowParser>();
 builder.Services.AddSingleton<WorkflowLoader>();
 builder.Services.AddSingleton<JsonReportGenerator>();
+builder.Services.AddSingleton<HtmlReportGenerator>();
 builder.Services.AddHttpClient<HttpRequestKeyword>();
 
 // Secret management
@@ -67,7 +68,11 @@ var fileArgument = new Argument<FileInfo>(
 
 var outputOption = new Option<FileInfo?>(
     name: "--output",
-    description: "Путь для сохранения JSON-отчёта.");
+    description: "Путь для сохранения отчёта (формат определяется по расширению: .json или .html).");
+
+var outputFormatOption = new Option<string?>(
+    name: "--format",
+    description: "Формат отчёта: json или html (по умолчанию определяется по расширению файла).");
 
 var runIdOption = new Option<string?>(
     name: "--run-id",
@@ -112,9 +117,10 @@ validateCommand.SetHandler((FileInfo file) =>
 var runCommand = new Command("run", "Выполняет workflow-файл.");
 runCommand.AddArgument(fileArgument);
 runCommand.AddOption(outputOption);
+runCommand.AddOption(outputFormatOption);
 runCommand.AddOption(runIdOption);
 
-runCommand.SetHandler(async (FileInfo file, FileInfo? output, string? runId) =>
+runCommand.SetHandler(async (FileInfo file, FileInfo? output, string? format, string? runId) =>
 {
     if (!file.Exists)
     {
@@ -124,7 +130,8 @@ runCommand.SetHandler(async (FileInfo file, FileInfo? output, string? runId) =>
 
     var loader = host.Services.GetRequiredService<WorkflowLoader>();
     var runtime = host.Services.GetRequiredService<IRuntimeEngine>();
-    var reportGenerator = host.Services.GetRequiredService<JsonReportGenerator>();
+    var jsonReportGenerator = host.Services.GetRequiredService<JsonReportGenerator>();
+    var htmlReportGenerator = host.Services.GetRequiredService<HtmlReportGenerator>();
 
     WorkflowDocument document;
     try
@@ -174,11 +181,24 @@ runCommand.SetHandler(async (FileInfo file, FileInfo? output, string? runId) =>
 
     if (output is not null)
     {
-        var json = reportGenerator.Generate(result);
-        await File.WriteAllTextAsync(output.FullName, json);
-        Console.WriteLine($"  Отчёт: {output.FullName}");
+        var reportFormat = DetermineReportFormat(output.FullName, format);
+        var reportContent = reportFormat == "html"
+            ? htmlReportGenerator.Generate(result)
+            : jsonReportGenerator.Generate(result);
+        
+        await File.WriteAllTextAsync(output.FullName, reportContent);
+        Console.WriteLine($"  Отчёт ({reportFormat}): {output.FullName}");
     }
-}, fileArgument, outputOption, runIdOption);
+}, fileArgument, outputOption, outputFormatOption, runIdOption);
+
+static string DetermineReportFormat(string filePath, string? explicitFormat)
+{
+    if (!string.IsNullOrEmpty(explicitFormat))
+        return explicitFormat.ToLowerInvariant();
+    
+    var extension = Path.GetExtension(filePath).ToLowerInvariant();
+    return extension == ".html" ? "html" : "json";
+}
 
 var listKeywordsCommand = new Command("list-keywords", "Выводит список доступных keywords.");
 listKeywordsCommand.SetHandler(() =>
