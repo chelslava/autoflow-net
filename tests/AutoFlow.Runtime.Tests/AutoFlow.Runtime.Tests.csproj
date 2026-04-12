@@ -17,7 +17,6 @@
   <ItemGroup>
     <ProjectReference Include="..\..\src\AutoFlow.Abstractions\AutoFlow.Abstractions.csproj" />
     <ProjectReference Include="..\..\src\AutoFlow.Runtime\AutoFlow.Runtime.csproj" />
-    <ProjectReference Include="..\..\src\AutoFlow.PluginModel\AutoFlow.PluginModel.csproj" />
     <ProjectReference Include="..\..\libraries\AutoFlow.Library.Assertions\AutoFlow.Library.Assertions.csproj" />
   </ItemGroup>
 </Project>

@@ -9,8 +9,6 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AutoFlow.Parser", "src\Auto
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AutoFlow.Runtime", "src\AutoFlow.Runtime\AutoFlow.Runtime.csproj", "{55555555-5555-5555-5555-555555555555}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AutoFlow.PluginModel", "src\AutoFlow.PluginModel\AutoFlow.PluginModel.csproj", "{66666666-6666-6666-6666-666666666666}"
-EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AutoFlow.Cli", "src\AutoFlow.Cli\AutoFlow.Cli.csproj", "{77777777-7777-7777-7777-777777777777}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AutoFlow.Library.Assertions", "libraries\AutoFlow.Library.Assertions\AutoFlow.Library.Assertions.csproj", "{88888888-8888-8888-8888-888888888888}"
@@ -81,18 +79,6 @@ Global
 		{55555555-5555-5555-5555-555555555555}.Release|x64.Build.0 = Release|Any CPU
 		{55555555-5555-5555-5555-555555555555}.Release|x86.ActiveCfg = Release|Any CPU
 		{55555555-5555-5555-5555-555555555555}.Release|x86.Build.0 = Release|Any CPU
-		{66666666-6666-6666-6666-666666666666}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{66666666-6666-6666-6666-666666666666}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{66666666-6666-6666-6666-666666666666}.Debug|x64.ActiveCfg = Debug|Any CPU
-		{66666666-6666-6666-6666-666666666666}.Debug|x64.Build.0 = Debug|Any CPU
-		{66666666-6666-6666-6666-666666666666}.Debug|x86.ActiveCfg = Debug|Any CPU
-		{66666666-6666-6666-6666-666666666666}.Debug|x86.Build.0 = Debug|Any CPU
-		{66666666-6666-6666-6666-666666666666}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{66666666-6666-6666-6666-666666666666}.Release|Any CPU.Build.0 = Release|Any CPU
-		{66666666-6666-6666-6666-666666666666}.Release|x64.ActiveCfg = Release|Any CPU
-		{66666666-6666-6666-6666-666666666666}.Release|x64.Build.0 = Release|Any CPU
-		{66666666-6666-6666-6666-666666666666}.Release|x86.ActiveCfg = Release|Any CPU
-		{66666666-6666-6666-6666-666666666666}.Release|x86.Build.0 = Release|Any CPU
 		{77777777-7777-7777-7777-777777777777}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{77777777-7777-7777-7777-777777777777}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{77777777-7777-7777-7777-777777777777}.Debug|x64.ActiveCfg = Debug|Any CPU

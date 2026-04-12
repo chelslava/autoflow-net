@@ -17,7 +17,6 @@
     <ProjectReference Include="..\AutoFlow.Abstractions\AutoFlow.Abstractions.csproj" />
     <ProjectReference Include="..\AutoFlow.Parser\AutoFlow.Parser.csproj" />
     <ProjectReference Include="..\AutoFlow.Runtime\AutoFlow.Runtime.csproj" />
-    <ProjectReference Include="..\AutoFlow.PluginModel\AutoFlow.PluginModel.csproj" />
     <ProjectReference Include="..\..\libraries\AutoFlow.Library.Assertions\AutoFlow.Library.Assertions.csproj" />
     <ProjectReference Include="..\AutoFlow.Validation\AutoFlow.Validation.csproj" />
     <ProjectReference Include="..\AutoFlow.Reporting\AutoFlow.Reporting.csproj" />

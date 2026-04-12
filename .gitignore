@@ -24,3 +24,9 @@ ms-playwright/
 *.cache
 *.tmp
 *.log
+
+# LSGlobal cache файлы
+*.lscache
+
+# Kilo (IDE plugin служебные файлы)
+.kilo/

@@ -1,10 +1,9 @@
 using System;
 using System.Linq;
 using System.Reflection;
-using AutoFlow.Abstractions;
 using Microsoft.Extensions.DependencyInjection;
 
-namespace AutoFlow.PluginModel;
+namespace AutoFlow.Abstractions;
 
 public static class ServiceCollectionExtensions
 {

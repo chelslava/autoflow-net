@@ -1,7 +1,6 @@
 // Этот код нужен для проверки минимального выполнения шага через runtime.
 using AutoFlow.Abstractions;
 using AutoFlow.Library.Assertions;
-using AutoFlow.PluginModel;
 using AutoFlow.Runtime;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
