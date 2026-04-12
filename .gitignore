@@ -30,3 +30,6 @@ ms-playwright/
 
 # Kilo (IDE plugin служебные файлы)
 .kilo/
+
+# Документация с ТЗ
+doc/
