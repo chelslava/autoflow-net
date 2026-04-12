@@ -18,6 +18,7 @@
 14. [Выражения переменных](#выражения-переменных)
 15. [Обработка ошибок](#обработка-ошибок)
 16. [Доступные Keywords](#доступные-keywords)
+17. [Отчёты (Reports)](#отчёты-reports)
 
 ---
 
@@ -2055,6 +2056,179 @@ dotnet run --project src/AutoFlow.Cli -- run workflow.yaml --output report.json
 - Время выполнения
 - Результаты каждого шага
 - Логи выполнения
+
+---
+
+## Отчёты (Reports)
+
+AutoFlow.NET поддерживает два формата отчётов: JSON и HTML.
+
+### JSON-отчёт
+
+JSON-отчёт содержит структурированные данные о выполнении workflow:
+
+```bash
+dotnet run -- run workflow.yaml --output report.json
+```
+
+**Структура JSON-отчёта:**
+
+```json
+{
+  "schemaVersion": "1.0",
+  "workflow": {
+    "name": "deployment_pipeline",
+    "status": "passed",
+    "startedAt": "2024-01-15T10:30:00.000Z",
+    "finishedAt": "2024-01-15T10:30:15.500Z",
+    "durationMs": 15500
+  },
+  "summary": {
+    "totalSteps": 5,
+    "passedSteps": 5,
+    "failedSteps": 0,
+    "skippedSteps": 0
+  },
+  "steps": [
+    {
+      "id": "load_config",
+      "keyword": "files.read",
+      "status": "passed",
+      "startedAt": "2024-01-15T10:30:00.100Z",
+      "finishedAt": "2024-01-15T10:30:00.250Z",
+      "durationMs": 150,
+      "outputs": {
+        "content": "{ ... }"
+      }
+    }
+  ]
+}
+```
+
+**Поля JSON-отчёта:**
+
+| Поле | Описание |
+|------|----------|
+| `schemaVersion` | Версия формата отчёта |
+| `workflow.name` | Имя workflow |
+| `workflow.status` | Статус: `passed`, `failed`, `skipped` |
+| `workflow.startedAt` | Время начала (ISO 8601) |
+| `workflow.finishedAt` | Время окончания (ISO 8601) |
+| `workflow.durationMs` | Длительность в миллисекундах |
+| `summary.totalSteps` | Общее количество шагов |
+| `summary.passedSteps` | Количество успешных шагов |
+| `summary.failedSteps` | Количество шагов с ошибками |
+| `summary.skippedSteps` | Количество пропущенных шагов |
+| `steps[].id` | Идентификатор шага |
+| `steps[].keyword` | Имя keyword |
+| `steps[].status` | Статус шага |
+| `steps[].durationMs` | Длительность шага (мс) |
+| `steps[].outputs` | Результаты выполнения |
+| `steps[].errorMessage` | Сообщение об ошибке (если есть) |
+| `steps[].logs` | Логи выполнения шага |
+
+### HTML-отчёт
+
+HTML-отчёт предоставляет интерактивный веб-интерфейс для просмотра результатов:
+
+```bash
+dotnet run -- run workflow.yaml --output report.html
+```
+
+**Возможности HTML-отчёта:**
+
+1. **Дерево выполнения**
+   - Раскрывающиеся узлы для каждого шага
+   - Цветовая индикация статусов
+   - Автоматическое раскрытие failed-шагов
+
+2. **Сводка выполнения**
+   - Общее количество шагов
+   - Количество пройденных/failed/skipped
+   - Общая длительность
+
+3. **Детали шагов**
+   - Время начала и окончания
+   - Результаты выполнения (outputs)
+   - Сообщения об ошибках
+   - Логи выполнения
+
+4. **Маскирование секретов**
+   - Секретные значения автоматически маскируются
+   - Защита конфиденциальных данных в отчётах
+
+### Выбор формата отчёта
+
+#### Автоматическое определение по расширению
+
+```bash
+# JSON отчёт
+dotnet run -- run workflow.yaml --output report.json
+
+# HTML отчёт
+dotnet run -- run workflow.yaml --output report.html
+```
+
+#### Явное указание формата
+
+```bash
+# Принудительно JSON
+dotnet run -- run workflow.yaml --output data.txt --format json
+
+# Принудительно HTML
+dotnet run -- run workflow.yaml --output data.txt --format html
+```
+
+### Пример использования
+
+```yaml
+schema_version: 1
+name: api_integration_test
+
+tasks:
+  main:
+    steps:
+      - step:
+          id: get_users
+          uses: http.request
+          with:
+            url: "https://api.example.com/users"
+          save_as:
+            body: users_data
+            
+      - step:
+          id: validate_response
+          uses: assert.equals
+          with:
+            expected: 200
+            actual: "${steps.get_users.outputs.status}"
+```
+
+```bash
+# Запуск с генерацией HTML-отчёта
+dotnet run -- run api_test.yaml --output reports/test_2024-01-15.html
+
+# Открыть отчёт в браузере
+start reports/test_2024-01-15.html  # Windows
+open reports/test_2024-01-15.html   # macOS
+xdg-open reports/test_2024-01-15.html  # Linux
+```
+
+### Программное использование
+
+```csharp
+using AutoFlow.Reporting;
+using AutoFlow.Abstractions;
+
+var generator = new HtmlReportGenerator(secretMasker);
+var html = generator.Generate(runResult);
+await File.WriteAllTextAsync("report.html", html);
+
+// Или JSON
+var jsonGenerator = new JsonReportGenerator(secretMasker);
+var json = jsonGenerator.Generate(runResult);
+await File.WriteAllTextAsync("report.json", json);
+```
 
 ---
 
