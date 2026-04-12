@@ -15,18 +15,18 @@ primary
 lastDtbSucceeded
 
 [properties]
-AssemblyName=AutoFlow.Abstractions
+AssemblyName=AutoFlow.Validation
 CommandLineArgsForDesignTimeEvaluation=-langversion:latest -define:TRACE
 CompilerGeneratedFilesOutputPath=
 MaxSupportedLangVersion=14.0
 ProjectAssetsFile=<PATH>obj/project.assets.json
-RootNamespace=AutoFlow.Abstractions
+RootNamespace=AutoFlow.Validation
 RunAnalyzers=
 RunAnalyzersDuringLiveAnalysis=
 SolutionPath=<PATH>../../AutoFlow.sln
 TargetFrameworkIdentifier=.NETCoreApp
-TargetPath=<PATH>bin/Debug/net10.0/AutoFlow.Abstractions.dll
-TargetRefPath=<PATH>obj/Debug/net10.0/ref/AutoFlow.Abstractions.dll
+TargetPath=<PATH>bin/Debug/net10.0/AutoFlow.Validation.dll
+TargetRefPath=<PATH>obj/Debug/net10.0/ref/AutoFlow.Validation.dll
 TemporaryDependencyNodeTargetIdentifier=net10.0
 
 [commandLineArguments]
@@ -46,50 +46,24 @@ TemporaryDependencyNodeTargetIdentifier=net10.0
 /debug:portable
 /filealign:512
 /optimize-
-/out:obj\Debug\net10.0\AutoFlow.Abstractions.dll
-/refout:obj\Debug\net10.0\refint\AutoFlow.Abstractions.dll
+/out:obj\Debug\net10.0\AutoFlow.Validation.dll
+/refout:obj\Debug\net10.0\refint\AutoFlow.Validation.dll
 /target:library
-/warnaserror+
+/warnaserror-
 /utf8output
 /deterministic+
 /langversion:latest
 /warnaserror+:NU1605,SYSLIB0011
 
 [sourceFiles]
-CallNode.cs
-ConditionNode.cs
-ExecutionStatus.cs
-ForEachNode.cs
-GroupNode.cs
-IExecutionContext.cs
-IfNode.cs
-IKeywordHandler.cs
-IKeywordMetadataProvider.cs
-InputDefinitionNode.cs
-IRuntimeEngine.cs
-IWorkflowNode.cs
-IWorkflowParser.cs
-IWorkflowValidator.cs
-KeywordAttribute.cs
-KeywordContext.cs
-KeywordMetadata.cs
-KeywordResult.cs
 obj/Debug/net10.0/
  .NETCoreApp,Version=v10.0.AssemblyAttributes.cs
- AutoFlow.Abstractions.AssemblyInfo.cs
- AutoFlow.Abstractions.GlobalUsings.g.cs
-OutputDefinitionNode.cs
-RetryNode.cs
-RunResult.cs
-RuntimeLaunchOptions.cs
-StepExecutionResult.cs
-StepNode.cs
-TaskNode.cs
-ValidationError.cs
-ValidationResult.cs
-WorkflowDocument.cs
+ AutoFlow.Validation.AssemblyInfo.cs
+ AutoFlow.Validation.GlobalUsings.g.cs
+WorkflowValidator.cs
 
 [metadataReferences]
+../AutoFlow.Abstractions/obj/Debug/net10.0/ref/AutoFlow.Abstractions.dll
 <DOTNET>/packs/Microsoft.NETCore.App.Ref/10.0.5/ref/net10.0/
  Microsoft.CSharp.dll
  Microsoft.VisualBasic.Core.dll
@@ -278,4 +252,4 @@ WorkflowDocument.cs
 [analyzerConfigFiles]
 ../../.editorconfig
 <DOTNET>/sdk/10.0.201/Sdks/Microsoft.NET.Sdk/analyzers/build/config/analysislevel_10_default.globalconfig
-obj/Debug/net10.0/AutoFlow.Abstractions.GeneratedMSBuildEditorConfig.editorconfig
+obj/Debug/net10.0/AutoFlow.Validation.GeneratedMSBuildEditorConfig.editorconfig
