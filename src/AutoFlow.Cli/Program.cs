@@ -6,6 +6,7 @@
 
 using AutoFlow.Abstractions;
 using AutoFlow.Library.Assertions;
+using AutoFlow.Library.Browser;
 using AutoFlow.Library.Files;
 using AutoFlow.Library.Http;
 using AutoFlow.Parser;
@@ -57,6 +58,11 @@ builder.Services.AddKeywordsFromAssembly(
 
 builder.Services.AddKeywordsFromAssembly(
     typeof(HttpRequestKeyword).Assembly,
+    (name, handlerType, argsType, category, description) =>
+        registry.Register(name, handlerType, argsType, category, description));
+
+builder.Services.AddKeywordsFromAssembly(
+    typeof(BrowserOpenKeyword).Assembly,
     (name, handlerType, argsType, category, description) =>
         registry.Register(name, handlerType, argsType, category, description));
 

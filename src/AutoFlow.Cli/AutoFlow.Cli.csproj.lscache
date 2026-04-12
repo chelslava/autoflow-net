@@ -65,6 +65,7 @@ Program.cs
 [metadataReferences]
 ../../libraries/
  AutoFlow.Library.Assertions/obj/Debug/net10.0/ref/AutoFlow.Library.Assertions.dll
+ AutoFlow.Library.Browser/obj/Debug/net10.0/ref/AutoFlow.Library.Browser.dll
  AutoFlow.Library.Files/obj/Debug/net10.0/ref/AutoFlow.Library.Files.dll
  AutoFlow.Library.Http/obj/Debug/net10.0/ref/AutoFlow.Library.Http.dll
 ../
@@ -242,6 +243,7 @@ Program.cs
  System.Xml.XPath.XDocument.dll
  WindowsBase.dll
 <NUGET>/
+ microsoft.bcl.asyncinterfaces/6.0.0/lib/netstandard2.1/Microsoft.Bcl.AsyncInterfaces.dll
  microsoft.extensions.configuration.abstractions/10.0.5/lib/net10.0/Microsoft.Extensions.Configuration.Abstractions.dll
  microsoft.extensions.configuration.binder/10.0.5/lib/net10.0/Microsoft.Extensions.Configuration.Binder.dll
  microsoft.extensions.configuration.commandline/10.0.0/lib/net10.0/Microsoft.Extensions.Configuration.CommandLine.dll
@@ -270,6 +272,7 @@ Program.cs
  microsoft.extensions.options.configurationextensions/10.0.5/lib/net10.0/Microsoft.Extensions.Options.ConfigurationExtensions.dll
  microsoft.extensions.options/10.0.5/lib/net10.0/Microsoft.Extensions.Options.dll
  microsoft.extensions.primitives/10.0.5/lib/net10.0/Microsoft.Extensions.Primitives.dll
+ microsoft.playwright/1.51.0/lib/netstandard2.0/Microsoft.Playwright.dll
  system.commandline/2.0.0-beta4.22272.1/lib/net6.0/System.CommandLine.dll
  system.diagnostics.eventlog/10.0.0/lib/net10.0/System.Diagnostics.EventLog.dll
  yamldotnet/16.3.0/lib/net8.0/YamlDotNet.dll
