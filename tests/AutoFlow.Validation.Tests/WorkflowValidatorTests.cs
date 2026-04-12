@@ -295,7 +295,7 @@ public sealed class WorkflowValidatorTests
                         new ForEachNode
                         {
                             Id = "loop1",
-                            ItemsExpression = "",
+                            Items = null,
                             As = "item",
                             Steps = new List<IWorkflowNode>
                             {
@@ -330,7 +330,7 @@ public sealed class WorkflowValidatorTests
                         new ForEachNode
                         {
                             Id = "loop1",
-                            ItemsExpression = "${items}",
+                            Items = "${items}",
                             As = "",
                             Steps = new List<IWorkflowNode>
                             {
@@ -405,7 +405,7 @@ public sealed class WorkflowValidatorTests
                                 new ForEachNode
                                 {
                                     Id = "loop1",
-                                    ItemsExpression = "${items}",
+                                    Items = "${items}",
                                     As = "item",
                                     Steps = new List<IWorkflowNode>
                                     {

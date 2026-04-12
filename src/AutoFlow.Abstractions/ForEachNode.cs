@@ -7,7 +7,7 @@ public sealed class ForEachNode : IWorkflowNode
 {
     public required string Id { get; init; }
 
-    public required string ItemsExpression { get; init; }
+    public object? Items { get; init; }
 
     public required string As { get; init; }
 

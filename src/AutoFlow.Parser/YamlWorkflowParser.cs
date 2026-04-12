@@ -189,7 +189,8 @@ public sealed class YamlWorkflowParser : IWorkflowParser
         if (stepMapping.Children.TryGetValue("if", out var ifContent))
             return ParseIfNode(ifContent);
 
-        if (stepMapping.Children.TryGetValue("for_each", out var forEachContent))
+        if (stepMapping.Children.TryGetValue("foreach", out var forEachContent) ||
+            stepMapping.Children.TryGetValue("for_each", out forEachContent))
             return ParseForEachNode(forEachContent);
 
         if (stepMapping.Children.TryGetValue("call", out var callContent))
@@ -211,12 +212,41 @@ public sealed class YamlWorkflowParser : IWorkflowParser
             Id = GetRequiredStringValue(stepMapping, "id"),
             Uses = GetRequiredStringValue(stepMapping, "uses"),
             With = ParseWith(stepMapping),
-            SaveAs = GetStringValue(stepMapping, "save_as"),
+            SaveAs = ParseSaveAs(stepMapping),
             ContinueOnError = GetBoolValue(stepMapping, "continue_on_error", false),
             Timeout = GetStringValue(stepMapping, "timeout"),
             Retry = ParseRetry(stepMapping),
             When = ParseCondition(stepMapping, "when")
         };
+    }
+
+    private Dictionary<string, string>? ParseSaveAs(YamlMappingNode stepMapping)
+    {
+        if (!stepMapping.Children.TryGetValue("save_as", out var saveAsNode))
+            return null;
+
+        if (saveAsNode is YamlScalarNode scalar)
+        {
+            var varName = scalar.Value;
+            if (string.IsNullOrWhiteSpace(varName))
+                return null;
+            return new Dictionary<string, string> { ["result"] = varName };
+        }
+
+        if (saveAsNode is YamlMappingNode mapping)
+        {
+            var result = new Dictionary<string, string>();
+            foreach (var kvp in mapping.Children)
+            {
+                var key = GetStringValue(kvp.Key);
+                var value = GetStringValue(kvp.Value);
+                if (!string.IsNullOrWhiteSpace(value))
+                    result[key] = value;
+            }
+            return result.Count > 0 ? result : null;
+        }
+
+        return null;
     }
 
     private IfNode ParseIfNode(YamlNode node)
@@ -238,10 +268,20 @@ public sealed class YamlWorkflowParser : IWorkflowParser
         if (node is not YamlMappingNode forEachMapping)
             throw new ArgumentException("For_each content должна быть объектом (mapping).", nameof(node));
 
+        object? items;
+        if (forEachMapping.Children.TryGetValue("items", out var itemsNode))
+        {
+            items = ParseScalarValue(itemsNode);
+        }
+        else
+        {
+            throw new ArgumentException("Поле 'items' обязательно для foreach.", nameof(node));
+        }
+
         return new ForEachNode
         {
             Id = GetStringValue(forEachMapping, "id") ?? $"foreach_{Guid.NewGuid():N}",
-            ItemsExpression = GetRequiredStringValue(forEachMapping, "items"),
+            Items = items,
             As = GetRequiredStringValue(forEachMapping, "as"),
             Steps = ParseStepsInField(forEachMapping, "steps")
         };
@@ -350,14 +390,39 @@ public sealed class YamlWorkflowParser : IWorkflowParser
         if (node is not YamlMappingNode conditionMapping)
             throw new ArgumentException("Condition должна быть объектом (mapping).", nameof(node));
 
-        return new ConditionNode
+        // Формат 1: op в явном виде
+        if (conditionMapping.Children.ContainsKey("op"))
         {
-            Var = GetStringValue(conditionMapping, "var"),
-            Left = GetStringValue(conditionMapping, "left"),
-            Op = GetRequiredStringValue(conditionMapping, "op"),
-            Value = ParseScalarValue(conditionMapping, "value"),
-            Right = ParseScalarValue(conditionMapping, "right")
-        };
+            return new ConditionNode
+            {
+                Var = GetStringValue(conditionMapping, "var"),
+                Left = GetStringValue(conditionMapping, "left"),
+                Op = GetRequiredStringValue(conditionMapping, "op"),
+                Value = ParseScalarValue(conditionMapping, "value"),
+                Right = ParseScalarValue(conditionMapping, "right")
+            };
+        }
+
+        // Формат 2: eq: [left, right] и другие операторы
+        var operators = new[] { "eq", "ne", "gt", "lt", "ge", "le", "contains", "starts_with", "ends_with", "exists" };
+        foreach (var op in operators)
+        {
+            if (conditionMapping.Children.TryGetValue(op, out var operandNode))
+            {
+                var operands = operandNode as YamlSequenceNode;
+                if (operands is null || operands.Children.Count < 2)
+                    throw new ArgumentException($"Оператор '{op}' требует массив из 2 элементов [left, right].", nameof(node));
+
+                return new ConditionNode
+                {
+                    Op = op,
+                    Left = GetStringValue(operands.Children[0]),
+                    Right = ParseScalarValue(operands.Children[1])
+                };
+            }
+        }
+
+        throw new ArgumentException($"Condition должна содержать поле 'op' или один из операторов: {string.Join(", ", operators)}.", nameof(node));
     }
 
     private List<IWorkflowNode> ParseStepsInField(YamlMappingNode mapping, string fieldName)

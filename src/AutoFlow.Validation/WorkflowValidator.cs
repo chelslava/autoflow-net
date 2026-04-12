@@ -206,13 +206,13 @@ public sealed class WorkflowValidator : IWorkflowValidator
 
     private void ValidateForEach(ForEachNode forEach, string location, HashSet<string> taskNames, HashSet<string> stepIds, ValidationResult result)
     {
-        if (string.IsNullOrWhiteSpace(forEach.ItemsExpression))
+        if (forEach.Items is null)
         {
             result.AddError(
                 "AF040",
                 "for_each must have 'items' property",
                 location,
-                "Use 'items: ${list}' to specify the collection to iterate");
+                "Use 'items: ${list}' or 'items: [item1, item2]' to specify the collection to iterate");
         }
 
         if (string.IsNullOrWhiteSpace(forEach.As))

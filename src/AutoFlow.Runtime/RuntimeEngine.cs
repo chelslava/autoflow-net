@@ -168,8 +168,36 @@ public sealed class RuntimeEngine : IRuntimeEngine
                 {
                     context.SetStepResult(step.Id, keywordResult.Outputs);
 
-                    if (!string.IsNullOrWhiteSpace(step.SaveAs))
-                        context.SetVariable(step.SaveAs!, keywordResult.Outputs);
+                    if (step.SaveAs is not null)
+                    {
+                        foreach (var kvp in step.SaveAs)
+                        {
+                            var varName = kvp.Value;
+                            object? valueToSet = null;
+
+                            if (keywordResult.Outputs is System.Collections.IDictionary dict)
+                            {
+                                if (dict.Contains(kvp.Key))
+                                    valueToSet = dict[kvp.Key];
+                                else
+                                    valueToSet = keywordResult.Outputs;
+                            }
+                            else if (keywordResult.Outputs is not null)
+                            {
+                                var prop = keywordResult.Outputs.GetType().GetProperty(kvp.Key);
+                                if (prop is not null)
+                                    valueToSet = prop.GetValue(keywordResult.Outputs);
+                                else
+                                    valueToSet = keywordResult.Outputs;
+                            }
+                            else
+                            {
+                                valueToSet = keywordResult.Outputs;
+                            }
+
+                            context.SetVariable(varName, valueToSet);
+                        }
+                    }
 
                     break;
                 }
@@ -241,6 +269,10 @@ public sealed class RuntimeEngine : IRuntimeEngine
     {
         var conditionMet = EvaluateCondition(ifNode.Condition, context);
 
+        _logger.LogInformation(
+            "If {IfId}: condition evaluated to {Result}",
+            ifNode.Id, conditionMet);
+
         var nodes = conditionMet ? ifNode.Then : ifNode.Else;
 
         if (nodes.Count > 0)
@@ -256,11 +288,21 @@ public sealed class RuntimeEngine : IRuntimeEngine
         RunResult runResult,
         CancellationToken cancellationToken)
     {
-        var items = VariableResolver.ResolveObject(
-            forEach.ItemsExpression.StartsWith("${")
-                ? forEach.ItemsExpression
-                : "${" + forEach.ItemsExpression + "}",
-            context);
+        object? items;
+
+        // Если Items — строка, считаем что это выражение
+        if (forEach.Items is string itemsExpression)
+        {
+            var expression = itemsExpression.StartsWith("${")
+                ? itemsExpression
+                : "${" + itemsExpression + "}";
+            items = VariableResolver.ResolveObject(expression, context);
+        }
+        else
+        {
+            // Иначе используем как есть (массив, список и т.д.)
+            items = forEach.Items;
+        }
 
         if (items is not System.Collections.IEnumerable enumerable)
         {

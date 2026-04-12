@@ -11,7 +11,7 @@ public sealed class StepNode : IWorkflowNode
 
     public Dictionary<string, object?> With { get; init; } = new();
 
-    public string? SaveAs { get; init; }
+    public Dictionary<string, string>? SaveAs { get; init; }
 
     public bool ContinueOnError { get; init; }
 

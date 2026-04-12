@@ -140,7 +140,8 @@ public sealed class YamlWorkflowParserTests
         Assert.Equal("browser.open", step.Uses);
         Assert.Equal("https://example.com", step.With["url"]);
         Assert.Equal(true, step.With["headless"]);
-        Assert.Equal("browser", step.SaveAs);
+        Assert.NotNull(step.SaveAs);
+        Assert.Equal("browser", step.SaveAs!["result"]);
         Assert.Equal("30s", step.Timeout);
         Assert.False(step.ContinueOnError);
         Assert.NotNull(step.Retry);
@@ -210,7 +211,7 @@ public sealed class YamlWorkflowParserTests
 
         var forEachNode = document.Tasks["main"].Steps[0] as ForEachNode;
         Assert.NotNull(forEachNode);
-        Assert.Equal("${users}", forEachNode!.ItemsExpression);
+        Assert.Equal("${users}", forEachNode!.Items);
         Assert.Equal("user", forEachNode.As);
         Assert.Single(forEachNode.Steps);
     }
