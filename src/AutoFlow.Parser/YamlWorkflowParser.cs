@@ -1,7 +1,8 @@
-// Этот код нужен для стартового parser-а YAML-документа в AST.
-// В первой версии здесь специально реализован минимальный каркас, который можно безопасно расширять.
+// Этот код нужен для полноценного YAML → AST parser-а с поддержкой всех узлов DSL.
 using System;
+using System.Collections.Generic;
 using AutoFlow.Abstractions;
+using YamlDotNet.RepresentationModel;
 
 namespace AutoFlow.Parser;
 
@@ -12,30 +13,487 @@ public sealed class YamlWorkflowParser : IWorkflowParser
         if (string.IsNullOrWhiteSpace(yamlContent))
             throw new ArgumentException("YAML-документ пустой.", nameof(yamlContent));
 
-        // Временная заглушка.
-        // Здесь позже нужно реализовать полноценный YAML -> AST parser.
-        return new WorkflowDocument
+        var yaml = new YamlStream();
+        using var reader = new System.IO.StringReader(yamlContent);
+        yaml.Load(reader);
+
+        if (yaml.Documents.Count == 0)
+            throw new ArgumentException("YAML-документ не содержит данных.", nameof(yamlContent));
+
+        var root = yaml.Documents[0].RootNode;
+        if (root is not YamlMappingNode rootMapping)
+            throw new ArgumentException("YAML-документ должен быть объектом (mapping).", nameof(yamlContent));
+
+        return ParseWorkflowDocument(rootMapping);
+    }
+
+    private WorkflowDocument ParseWorkflowDocument(YamlMappingNode root)
+    {
+        var document = new WorkflowDocument
         {
-            Name = "stub-workflow",
-            Variables = new(),
-            Tasks = new()
-            {
-                ["main"] = new TaskNode
-                {
-                    Steps =
-                    [
-                        new StepNode
-                        {
-                            Id = "log_start",
-                            Uses = "log.info",
-                            With = new()
-                            {
-                                ["message"] = "Стартовый workflow из заглушки parser-а."
-                            }
-                        }
-                    ]
-                }
-            }
+            SchemaVersion = GetIntValue(root, "schema_version", 1),
+            Name = GetRequiredStringValue(root, "name"),
+            Variables = ParseVariables(root),
+            Tasks = ParseTasks(root)
         };
+
+        return document;
+    }
+
+    private Dictionary<string, object?> ParseVariables(YamlMappingNode root)
+    {
+        if (!root.Children.TryGetValue("variables", out var variablesNode))
+            return new Dictionary<string, object?>();
+
+        if (variablesNode is not YamlMappingNode variablesMapping)
+            return new Dictionary<string, object?>();
+
+        var result = new Dictionary<string, object?>();
+
+        foreach (var kvp in variablesMapping.Children)
+        {
+            var key = GetStringValue(kvp.Key);
+            var value = ParseScalarValue(kvp.Value);
+            result[key] = value;
+        }
+
+        return result;
+    }
+
+    private Dictionary<string, TaskNode> ParseTasks(YamlMappingNode root)
+    {
+        if (!root.Children.TryGetValue("tasks", out var tasksNode))
+            throw new ArgumentException("YAML-документ должен содержать секцию 'tasks'.", nameof(root));
+
+        if (tasksNode is not YamlMappingNode tasksMapping)
+            throw new ArgumentException("Секция 'tasks' должна быть объектом (mapping).", nameof(root));
+
+        var result = new Dictionary<string, TaskNode>();
+
+        foreach (var kvp in tasksMapping.Children)
+        {
+            var taskName = GetStringValue(kvp.Key);
+            var taskNode = ParseTask(kvp.Value);
+            result[taskName] = taskNode;
+        }
+
+        return result;
+    }
+
+    private TaskNode ParseTask(YamlNode node)
+    {
+        if (node is not YamlMappingNode taskMapping)
+            throw new ArgumentException("Task должна быть объектом (mapping).", nameof(node));
+
+        return new TaskNode
+        {
+            Description = GetStringValue(taskMapping, "description"),
+            Inputs = ParseInputDefinitions(taskMapping),
+            Outputs = ParseOutputDefinitions(taskMapping),
+            Steps = ParseSteps(taskMapping)
+        };
+    }
+
+    private Dictionary<string, InputDefinitionNode> ParseInputDefinitions(YamlMappingNode taskMapping)
+    {
+        if (!taskMapping.Children.TryGetValue("inputs", out var inputsNode))
+            return new Dictionary<string, InputDefinitionNode>();
+
+        if (inputsNode is not YamlMappingNode inputsMapping)
+            return new Dictionary<string, InputDefinitionNode>();
+
+        var result = new Dictionary<string, InputDefinitionNode>();
+
+        foreach (var kvp in inputsMapping.Children)
+        {
+            var inputName = GetStringValue(kvp.Key);
+            var inputDef = ParseInputDefinition(kvp.Value);
+            result[inputName] = inputDef;
+        }
+
+        return result;
+    }
+
+    private InputDefinitionNode ParseInputDefinition(YamlNode node)
+    {
+        if (node is not YamlMappingNode inputMapping)
+            throw new ArgumentException("Input definition должна быть объектом (mapping).", nameof(node));
+
+        return new InputDefinitionNode
+        {
+            Type = GetRequiredStringValue(inputMapping, "type"),
+            Required = GetBoolValue(inputMapping, "required", false),
+            Secret = GetBoolValue(inputMapping, "secret", false)
+        };
+    }
+
+    private Dictionary<string, OutputDefinitionNode> ParseOutputDefinitions(YamlMappingNode taskMapping)
+    {
+        if (!taskMapping.Children.TryGetValue("outputs", out var outputsNode))
+            return new Dictionary<string, OutputDefinitionNode>();
+
+        if (outputsNode is not YamlMappingNode outputsMapping)
+            return new Dictionary<string, OutputDefinitionNode>();
+
+        var result = new Dictionary<string, OutputDefinitionNode>();
+
+        foreach (var kvp in outputsMapping.Children)
+        {
+            var outputName = GetStringValue(kvp.Key);
+            var outputDef = ParseOutputDefinition(kvp.Value);
+            result[outputName] = outputDef;
+        }
+
+        return result;
+    }
+
+    private OutputDefinitionNode ParseOutputDefinition(YamlNode node)
+    {
+        if (node is not YamlMappingNode outputMapping)
+            throw new ArgumentException("Output definition должна быть объектом (mapping).", nameof(node));
+
+        return new OutputDefinitionNode
+        {
+            Type = GetRequiredStringValue(outputMapping, "type")
+        };
+    }
+
+    private List<IWorkflowNode> ParseSteps(YamlMappingNode taskMapping)
+    {
+        if (!taskMapping.Children.TryGetValue("steps", out var stepsNode))
+            return new List<IWorkflowNode>();
+
+        if (stepsNode is not YamlSequenceNode stepsSequence)
+            throw new ArgumentException("Секция 'steps' должна быть массивом (sequence).", nameof(taskMapping));
+
+        var result = new List<IWorkflowNode>();
+
+        foreach (var stepNode in stepsSequence.Children)
+        {
+            var workflowNode = ParseWorkflowNode(stepNode);
+            if (workflowNode is not null)
+                result.Add(workflowNode);
+        }
+
+        return result;
+    }
+
+    private IWorkflowNode? ParseWorkflowNode(YamlNode node)
+    {
+        if (node is not YamlMappingNode stepMapping)
+            throw new ArgumentException("Step должна быть объектом (mapping).", nameof(node));
+
+        if (stepMapping.Children.TryGetValue("step", out var stepContent))
+            return ParseStepNode(stepContent);
+
+        if (stepMapping.Children.TryGetValue("if", out var ifContent))
+            return ParseIfNode(ifContent);
+
+        if (stepMapping.Children.TryGetValue("for_each", out var forEachContent))
+            return ParseForEachNode(forEachContent);
+
+        if (stepMapping.Children.TryGetValue("call", out var callContent))
+            return ParseCallNode(callContent);
+
+        if (stepMapping.Children.TryGetValue("group", out var groupContent))
+            return ParseGroupNode(groupContent);
+
+        throw new ArgumentException($"Неизвестный тип узла в steps. Доступные: step, if, for_each, call, group.", nameof(node));
+    }
+
+    private StepNode ParseStepNode(YamlNode node)
+    {
+        if (node is not YamlMappingNode stepMapping)
+            throw new ArgumentException("Step content должна быть объектом (mapping).", nameof(node));
+
+        return new StepNode
+        {
+            Id = GetRequiredStringValue(stepMapping, "id"),
+            Uses = GetRequiredStringValue(stepMapping, "uses"),
+            With = ParseWith(stepMapping),
+            SaveAs = GetStringValue(stepMapping, "save_as"),
+            ContinueOnError = GetBoolValue(stepMapping, "continue_on_error", false),
+            Timeout = GetStringValue(stepMapping, "timeout"),
+            Retry = ParseRetry(stepMapping),
+            When = ParseCondition(stepMapping, "when")
+        };
+    }
+
+    private IfNode ParseIfNode(YamlNode node)
+    {
+        if (node is not YamlMappingNode ifMapping)
+            throw new ArgumentException("If content должна быть объектом (mapping).", nameof(node));
+
+        return new IfNode
+        {
+            Id = GetStringValue(ifMapping, "id") ?? $"if_{Guid.NewGuid():N}",
+            Condition = ParseRequiredCondition(ifMapping, "condition"),
+            Then = ParseStepsInField(ifMapping, "then"),
+            Else = ParseStepsInField(ifMapping, "else")
+        };
+    }
+
+    private ForEachNode ParseForEachNode(YamlNode node)
+    {
+        if (node is not YamlMappingNode forEachMapping)
+            throw new ArgumentException("For_each content должна быть объектом (mapping).", nameof(node));
+
+        return new ForEachNode
+        {
+            Id = GetStringValue(forEachMapping, "id") ?? $"foreach_{Guid.NewGuid():N}",
+            ItemsExpression = GetRequiredStringValue(forEachMapping, "items"),
+            As = GetRequiredStringValue(forEachMapping, "as"),
+            Steps = ParseStepsInField(forEachMapping, "steps")
+        };
+    }
+
+    private CallNode ParseCallNode(YamlNode node)
+    {
+        if (node is not YamlMappingNode callMapping)
+            throw new ArgumentException("Call content должна быть объектом (mapping).", nameof(node));
+
+        return new CallNode
+        {
+            Id = GetStringValue(callMapping, "id") ?? $"call_{Guid.NewGuid():N}",
+            Task = GetRequiredStringValue(callMapping, "task"),
+            Inputs = ParseInputs(callMapping),
+            SaveAs = GetStringValue(callMapping, "save_as")
+        };
+    }
+
+    private Dictionary<string, object?> ParseInputs(YamlMappingNode mapping)
+    {
+        if (!mapping.Children.TryGetValue("inputs", out var inputsNode))
+            return new Dictionary<string, object?>();
+
+        if (inputsNode is not YamlMappingNode inputsMapping)
+            return new Dictionary<string, object?>();
+
+        var result = new Dictionary<string, object?>();
+
+        foreach (var kvp in inputsMapping.Children)
+        {
+            var key = GetStringValue(kvp.Key);
+            var value = ParseScalarValue(kvp.Value);
+            result[key] = value;
+        }
+
+        return result;
+    }
+
+    private GroupNode ParseGroupNode(YamlNode node)
+    {
+        if (node is not YamlMappingNode groupMapping)
+            throw new ArgumentException("Group content должна быть объектом (mapping).", nameof(node));
+
+        return new GroupNode
+        {
+            Id = GetStringValue(groupMapping, "id") ?? $"group_{Guid.NewGuid():N}",
+            Name = GetRequiredStringValue(groupMapping, "name"),
+            Steps = ParseStepsInField(groupMapping, "steps")
+        };
+    }
+
+    private Dictionary<string, object?> ParseWith(YamlMappingNode stepMapping)
+    {
+        if (!stepMapping.Children.TryGetValue("with", out var withNode))
+            return new Dictionary<string, object?>();
+
+        if (withNode is not YamlMappingNode withMapping)
+            return new Dictionary<string, object?>();
+
+        var result = new Dictionary<string, object?>();
+
+        foreach (var kvp in withMapping.Children)
+        {
+            var key = GetStringValue(kvp.Key);
+            var value = ParseScalarValue(kvp.Value);
+            result[key] = value;
+        }
+
+        return result;
+    }
+
+    private RetryNode? ParseRetry(YamlMappingNode stepMapping)
+    {
+        if (!stepMapping.Children.TryGetValue("retry", out var retryNode))
+            return null;
+
+        if (retryNode is not YamlMappingNode retryMapping)
+            return null;
+
+        return new RetryNode
+        {
+            Attempts = GetIntValue(retryMapping, "attempts", 1),
+            Delay = GetStringValue(retryMapping, "delay")
+        };
+    }
+
+    private ConditionNode? ParseCondition(YamlMappingNode mapping, string fieldName)
+    {
+        if (!mapping.Children.TryGetValue(fieldName, out var conditionNode))
+            return null;
+
+        return ParseConditionNode(conditionNode);
+    }
+
+    private ConditionNode ParseRequiredCondition(YamlMappingNode mapping, string fieldName)
+    {
+        if (!mapping.Children.TryGetValue(fieldName, out var conditionNode))
+            throw new ArgumentException($"Поле '{fieldName}' обязательно для условия.", nameof(mapping));
+
+        return ParseConditionNode(conditionNode);
+    }
+
+    private ConditionNode ParseConditionNode(YamlNode node)
+    {
+        if (node is not YamlMappingNode conditionMapping)
+            throw new ArgumentException("Condition должна быть объектом (mapping).", nameof(node));
+
+        return new ConditionNode
+        {
+            Var = GetStringValue(conditionMapping, "var"),
+            Left = GetStringValue(conditionMapping, "left"),
+            Op = GetRequiredStringValue(conditionMapping, "op"),
+            Value = ParseScalarValue(conditionMapping, "value"),
+            Right = ParseScalarValue(conditionMapping, "right")
+        };
+    }
+
+    private List<IWorkflowNode> ParseStepsInField(YamlMappingNode mapping, string fieldName)
+    {
+        if (!mapping.Children.TryGetValue(fieldName, out var stepsNode))
+            return new List<IWorkflowNode>();
+
+        if (stepsNode is not YamlSequenceNode stepsSequence)
+            throw new ArgumentException($"Поле '{fieldName}' должно быть массивом (sequence).", nameof(mapping));
+
+        var result = new List<IWorkflowNode>();
+
+        foreach (var stepNode in stepsSequence.Children)
+        {
+            var workflowNode = ParseWorkflowNode(stepNode);
+            if (workflowNode is not null)
+                result.Add(workflowNode);
+        }
+
+        return result;
+    }
+
+    private object? ParseScalarValue(YamlMappingNode mapping, string key)
+    {
+        if (!mapping.Children.TryGetValue(key, out var node))
+            return null;
+
+        return ParseScalarValue(node);
+    }
+
+    private object? ParseScalarValue(YamlNode node)
+    {
+        return node switch
+        {
+            YamlScalarNode scalar => ParseScalarValue(scalar),
+            YamlMappingNode mapping => ParseMappingToObject(mapping),
+            YamlSequenceNode sequence => ParseSequenceToArray(sequence),
+            _ => null
+        };
+    }
+
+    private object? ParseScalarValue(YamlScalarNode scalar)
+    {
+        var value = scalar.Value;
+
+        if (string.IsNullOrEmpty(value))
+            return null;
+
+        if (bool.TryParse(value, out var boolValue))
+            return boolValue;
+
+        if (int.TryParse(value, out var intValue))
+            return intValue;
+
+        if (double.TryParse(value, out var doubleValue))
+            return doubleValue;
+
+        return value;
+    }
+
+    private Dictionary<string, object?> ParseMappingToObject(YamlMappingNode mapping)
+    {
+        var result = new Dictionary<string, object?>();
+
+        foreach (var kvp in mapping.Children)
+        {
+            var key = GetStringValue(kvp.Key);
+            var value = ParseScalarValue(kvp.Value);
+            result[key] = value;
+        }
+
+        return result;
+    }
+
+    private List<object?> ParseSequenceToArray(YamlSequenceNode sequence)
+    {
+        var result = new List<object?>();
+
+        foreach (var item in sequence.Children)
+        {
+            var value = ParseScalarValue(item);
+            result.Add(value);
+        }
+
+        return result;
+    }
+
+    private static string GetStringValue(YamlNode node)
+    {
+        if (node is YamlScalarNode scalar)
+            return scalar.Value ?? string.Empty;
+
+        throw new ArgumentException($"Ожидалась строка, получен {node.NodeType}.", nameof(node));
+    }
+
+    private static string? GetStringValue(YamlMappingNode mapping, string key)
+    {
+        if (!mapping.Children.TryGetValue(key, out var node))
+            return null;
+
+        if (node is YamlScalarNode scalar)
+            return scalar.Value;
+
+        return null;
+    }
+
+    private static string GetRequiredStringValue(YamlMappingNode mapping, string key)
+    {
+        if (!mapping.Children.TryGetValue(key, out var node))
+            throw new ArgumentException($"Обязательное поле '{key}' не найдено.", nameof(mapping));
+
+        if (node is YamlScalarNode scalar)
+            return scalar.Value ?? throw new ArgumentException($"Значение поля '{key}' не может быть null.", nameof(mapping));
+
+        throw new ArgumentException($"Поле '{key}' должно быть строкой.", nameof(mapping));
+    }
+
+    private static int GetIntValue(YamlMappingNode mapping, string key, int defaultValue)
+    {
+        if (!mapping.Children.TryGetValue(key, out var node))
+            return defaultValue;
+
+        if (node is YamlScalarNode scalar && int.TryParse(scalar.Value, out var result))
+            return result;
+
+        return defaultValue;
+    }
+
+    private static bool GetBoolValue(YamlMappingNode mapping, string key, bool defaultValue)
+    {
+        if (!mapping.Children.TryGetValue(key, out var node))
+            return defaultValue;
+
+        if (node is YamlScalarNode scalar && bool.TryParse(scalar.Value, out var result))
+            return result;
+
+        return defaultValue;
     }
 }
