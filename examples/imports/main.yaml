@@ -1,0 +1,50 @@
+# main.yaml - Главный workflow с импортами
+
+schema_version: 1
+name: main_workflow
+
+imports:
+  - ./common_vars.yaml
+  - ./helpers.yaml
+
+variables:
+  # Переопределяем переменную из импорта
+  api_base: https://production.api.example.com
+  # Локальные переменные
+  environment: production
+
+tasks:
+  main:
+    steps:
+      - step:
+          id: start
+          uses: log.info
+          with:
+            message: "🚀 Starting ${app_name} in ${environment}"
+
+      # Используем задачу из helpers.yaml
+      - call:
+          id: check_readme
+          task: check_file
+          with:
+            path: README.md
+
+      # Используем задачу из helpers.yaml
+      - call:
+          id: check_config
+          task: check_file
+          with:
+            path: config.json
+
+      # Используем задачу из helpers.yaml
+      - call:
+          id: report_success
+          task: log_success
+          with:
+            message: "All checks passed for ${app_name}"
+
+      - step:
+          id: finish
+          uses: log.info
+          with:
+            message: "🏁 Workflow complete"

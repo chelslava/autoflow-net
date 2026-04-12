@@ -33,11 +33,31 @@ public sealed class YamlWorkflowParser : IWorkflowParser
         {
             SchemaVersion = GetIntValue(root, "schema_version", 1),
             Name = GetRequiredStringValue(root, "name"),
+            Imports = ParseImports(root),
             Variables = ParseVariables(root),
             Tasks = ParseTasks(root)
         };
 
         return document;
+    }
+
+    private List<string> ParseImports(YamlMappingNode root)
+    {
+        if (!root.Children.TryGetValue("imports", out var importsNode))
+            return new List<string>();
+
+        if (importsNode is YamlSequenceNode importsSequence)
+        {
+            var result = new List<string>();
+            foreach (var item in importsSequence.Children)
+            {
+                if (item is YamlScalarNode scalar && !string.IsNullOrWhiteSpace(scalar.Value))
+                    result.Add(scalar.Value);
+            }
+            return result;
+        }
+
+        return new List<string>();
     }
 
     private Dictionary<string, object?> ParseVariables(YamlMappingNode root)
@@ -296,17 +316,26 @@ public sealed class YamlWorkflowParser : IWorkflowParser
         {
             Id = GetStringValue(callMapping, "id") ?? $"call_{Guid.NewGuid():N}",
             Task = GetRequiredStringValue(callMapping, "task"),
-            Inputs = ParseInputs(callMapping),
+            Inputs = ParseCallInputs(callMapping),
             SaveAs = GetStringValue(callMapping, "save_as")
         };
     }
 
-    private Dictionary<string, object?> ParseInputs(YamlMappingNode mapping)
+    private Dictionary<string, object?> ParseCallInputs(YamlMappingNode mapping)
     {
-        if (!mapping.Children.TryGetValue("inputs", out var inputsNode))
-            return new Dictionary<string, object?>();
+        // Поддерживаем оба формата: 'with' и 'inputs'
+        if (mapping.Children.TryGetValue("with", out var withNode))
+            return ParseInputsFromNode(withNode);
 
-        if (inputsNode is not YamlMappingNode inputsMapping)
+        if (mapping.Children.TryGetValue("inputs", out var inputsNode))
+            return ParseInputsFromNode(inputsNode);
+
+        return new Dictionary<string, object?>();
+    }
+
+    private Dictionary<string, object?> ParseInputsFromNode(YamlNode node)
+    {
+        if (node is not YamlMappingNode inputsMapping)
             return new Dictionary<string, object?>();
 
         var result = new Dictionary<string, object?>();
@@ -319,19 +348,6 @@ public sealed class YamlWorkflowParser : IWorkflowParser
         }
 
         return result;
-    }
-
-    private GroupNode ParseGroupNode(YamlNode node)
-    {
-        if (node is not YamlMappingNode groupMapping)
-            throw new ArgumentException("Group content должна быть объектом (mapping).", nameof(node));
-
-        return new GroupNode
-        {
-            Id = GetStringValue(groupMapping, "id") ?? $"group_{Guid.NewGuid():N}",
-            Name = GetRequiredStringValue(groupMapping, "name"),
-            Steps = ParseStepsInField(groupMapping, "steps")
-        };
     }
 
     private Dictionary<string, object?> ParseWith(YamlMappingNode stepMapping)
@@ -366,6 +382,19 @@ public sealed class YamlWorkflowParser : IWorkflowParser
         {
             Attempts = GetIntValue(retryMapping, "attempts", 1),
             Delay = GetStringValue(retryMapping, "delay")
+        };
+    }
+
+    private GroupNode ParseGroupNode(YamlNode node)
+    {
+        if (node is not YamlMappingNode groupMapping)
+            throw new ArgumentException("Group content должна быть объектом (mapping).", nameof(node));
+
+        return new GroupNode
+        {
+            Id = GetStringValue(groupMapping, "id") ?? $"group_{Guid.NewGuid():N}",
+            Name = GetRequiredStringValue(groupMapping, "name"),
+            Steps = ParseStepsInField(groupMapping, "steps")
         };
     }
 

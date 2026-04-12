@@ -9,6 +9,10 @@ public sealed class WorkflowDocument
 
     public required string Name { get; init; }
 
+    public string? FilePath { get; init; }
+
+    public List<string> Imports { get; init; } = new();
+
     public Dictionary<string, object?> Variables { get; init; } = new();
 
     public Dictionary<string, TaskNode> Tasks { get; init; } = new();

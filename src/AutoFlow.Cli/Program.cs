@@ -22,6 +22,7 @@ builder.Services.AddSingleton(registry);
 builder.Services.AddSingleton<KeywordExecutor>();
 builder.Services.AddSingleton<IRuntimeEngine, RuntimeEngine>();
 builder.Services.AddSingleton<IWorkflowParser, YamlWorkflowParser>();
+builder.Services.AddSingleton<WorkflowLoader>();
 builder.Services.AddSingleton<JsonReportGenerator>();
 builder.Services.AddHttpClient<HttpRequestKeyword>();
 
@@ -98,12 +99,20 @@ runCommand.SetHandler(async (FileInfo file, FileInfo? output) =>
         return;
     }
 
-    var parser = host.Services.GetRequiredService<IWorkflowParser>();
+    var loader = host.Services.GetRequiredService<WorkflowLoader>();
     var runtime = host.Services.GetRequiredService<IRuntimeEngine>();
     var reportGenerator = host.Services.GetRequiredService<JsonReportGenerator>();
 
-    var yaml = await File.ReadAllTextAsync(file.FullName);
-    var document = parser.Parse(yaml);
+    WorkflowDocument document;
+    try
+    {
+        document = loader.LoadFromFile(file.FullName);
+    }
+    catch (Exception ex)
+    {
+        Console.WriteLine($"Ошибка загрузки workflow: {ex.Message}");
+        return;
+    }
 
     var validator = new WorkflowValidator(registry);
     var validationResult = validator.Validate(document);

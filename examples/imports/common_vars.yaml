@@ -1,0 +1,15 @@
+# common_vars.yaml - Общие переменные для переиспользования
+
+schema_version: 1
+name: common_variables
+
+variables:
+  app_name: AutoFlow
+  api_base: https://api.example.com
+  timeout: 30
+  retry_count: 3
+
+tasks:
+  # Пустая задача, так как это файл только с переменными
+  _placeholder:
+    steps: []

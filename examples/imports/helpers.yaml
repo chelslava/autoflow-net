@@ -1,0 +1,65 @@
+# helpers.yaml - Переиспользуемые задачи
+
+schema_version: 1
+name: helpers
+
+variables:
+  helper_version: "1.0"
+
+tasks:
+  log_success:
+    inputs:
+      message:
+        type: string
+        default: "Operation completed"
+    steps:
+      - step:
+          id: log_ok
+          uses: log.info
+          with:
+            message: "✓ ${message}"
+
+  log_error:
+    inputs:
+      message:
+        type: string
+        default: "Operation failed"
+    steps:
+      - step:
+          id: log_fail
+          uses: log.info
+          with:
+            message: "✗ ${message}"
+
+  check_file:
+    inputs:
+      path:
+        type: string
+        required: true
+    steps:
+      - step:
+          id: check
+          uses: files.exists
+          with:
+            path: "${path}"
+          save_as:
+            exists: file_exists
+
+      - if:
+          id: report_result
+          condition:
+            eq:
+              - "${file_exists}"
+              - true
+          then:
+            - step:
+                id: found
+                uses: log.info
+                with:
+                  message: "File found: ${path}"
+          else:
+            - step:
+                id: not_found
+                uses: log.info
+                with:
+                  message: "File not found: ${path}"
