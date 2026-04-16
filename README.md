@@ -70,6 +70,27 @@ dotnet run --project src/AutoFlow.Cli -- run examples/flow.yaml
 
 **Prerequisites:** [.NET 10 SDK](https://dotnet.microsoft.com/download)
 
+### Browser Automation Setup
+
+For browser automation workflows, install Playwright browsers:
+
+```bash
+# Build the CLI first
+dotnet build src/AutoFlow.Cli
+
+# Install browsers (Chromium, Firefox, WebKit)
+pwsh src/AutoFlow.Cli/bin/Debug/net10.0/playwright.ps1 install
+
+# Or install only Chromium (faster, ~150 MB)
+pwsh src/AutoFlow.Cli/bin/Debug/net10.0/playwright.ps1 install chromium
+```
+
+**Run browser example:**
+
+```bash
+dotnet run --project src/AutoFlow.Cli -- run examples/browser_login.yaml
+```
+
 ---
 
 ## 📖 Real-world Example
