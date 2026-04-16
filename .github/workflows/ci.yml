@@ -88,7 +88,7 @@ jobs:
           for file in examples/*.yaml; do
             if [[ "$file" != *"browser"* ]]; then
               echo "Validating $file"
-              if ! dotnet run --project src/AutoFlow.Cli --no-build -- validate "$file"; then
+              if ! dotnet run --project src/AutoFlow.Cli -c Release -- validate "$file"; then
                 validation_failed=true
                 echo "::warning::Validation failed for $file"
               fi
