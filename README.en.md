@@ -1,123 +1,115 @@
-# AutoFlow.NET
+<p align="center">
+  <img src="https://img.shields.io/badge/.NET-10.0-512BD4?style=for-the-badge&logo=dotnet" alt=".NET 10">
+  <img src="https://img.shields.io/badge/YAML-DSL-FFB13B?style=for-the-badge&logo=yaml" alt="YAML DSL">
+  <img src="https://img.shields.io/badge/Playwright-Browser-2EAD33?style=for-the-badge&logo=playwright" alt="Playwright">
+  <img src="https://img.shields.io/badge/License-MIT-green?style=for-the-badge" alt="MIT License">
+</p>
 
-Cross-platform automation framework on .NET 10 with YAML DSL for workflow definitions.
+<h1 align="center">⚡ AutoFlow.NET</h1>
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![.NET](https://img.shields.io/badge/.NET-10.0-512BD4)](https://dotnet.microsoft.com/)
-[![CI](https://github.com/chelslava/autoflow-net/actions/workflows/ci.yml/badge.svg)](https://github.com/chelslava/autoflow-net/actions/workflows/ci.yml)
+<p align="center">
+  <strong>Automate anything. Write less code. Ship faster.</strong>
+</p>
 
-## Features
+<p align="center">
+  A modern, cross-platform automation framework with elegant YAML DSL.<br>
+  Build workflows in minutes, not days.
+</p>
 
-- **YAML DSL** — Declarative workflow definitions
-- **Plugin Architecture** — Extensible keyword system
-- **Control Flow** — if/foreach/call/group/parallel constructs
-- **Variables** — `${var}`, `${env:NAME}`, `${steps.id.outputs}`, `${secret:NAME}`
-- **Retry & Timeout** — Retry with exponential backoff, configurable timeouts
-- **Parallel Execution** — Concurrent execution of independent steps
-- **Secrets Management** — Secure secret handling with log masking
-- **Lifecycle Hooks** — Extensible workflow event system
-- **Error Handling** — on_error/finally blocks at task level
-- **Reports** — JSON and HTML execution reports with secret masking
-- **Browser Automation** — Playwright-based browser automation
-- **Database** — SQLite for execution history persistence
+---
 
-## Installation
+## 🎯 Why AutoFlow.NET?
 
-Requires .NET 10 SDK.
-
-```bash
-git clone https://github.com/chelslava/autoflow-net.git
-cd autoflow-net
-dotnet restore
-dotnet build
-```
-
-## CLI Commands
-
-### Execute workflow
-
-```bash
-dotnet run --project src/AutoFlow.Cli -- run examples/flow.yaml
-```
-
-With report output:
-
-```bash
-# JSON report
-dotnet run --project src/AutoFlow.Cli -- run examples/flow.yaml --output report.json
-
-# HTML report
-dotnet run --project src/AutoFlow.Cli -- run examples/flow.yaml --output report.html
-```
-
-### View execution history
-
-```bash
-# Show last 20 executions
-dotnet run --project src/AutoFlow.Cli -- history
-
-# Filter by workflow name
-dotnet run --project src/AutoFlow.Cli -- history --workflow demo_flow
-
-# Filter by status
-dotnet run --project src/AutoFlow.Cli -- history --status Failed
-```
-
-### Validate workflow
-
-```bash
-dotnet run --project src/AutoFlow.Cli -- validate examples/flow.yaml
-```
-
-### List available keywords
-
-```bash
-dotnet run --project src/AutoFlow.Cli -- list-keywords
-```
-
-## Example Workflow
+**Stop writing boilerplate automation scripts.** Define your workflows in clean YAML and let the engine handle the complexity.
 
 ```yaml
 schema_version: 1
-name: demo_flow
-
-variables:
-  app_name: AutoFlow
-  api_url: https://api.example.com
+name: fetch_and_process
 
 tasks:
   main:
     steps:
-      - step:
-          id: log_start
-          uses: log.info
-          with:
-            message: "Starting ${app_name}"
+      - parallel:
+          max_concurrency: 5
+          steps:
+            - step: { id: users, uses: http.request, with: { url: "${api}/users" } }
+            - step: { id: posts, uses: http.request, with: { url: "${api}/posts" } }
+            - step: { id: comments, uses: http.request, with: { url: "${api}/comments" } }
+```
 
+That's it. **3 parallel HTTP requests** with automatic error handling, logging, and reporting.
+
+---
+
+## ✨ Features that matter
+
+| Feature | What it means for you |
+|---------|----------------------|
+| **YAML DSL** | Describe workflows declaratively — no complex code |
+| **Parallel Execution** | Run independent steps concurrently — 5x faster workflows |
+| **Exponential Backoff Retry** | Auto-retry with smart delays — resilient by default |
+| **Secrets Management** | Inject secrets safely — auto-masked in logs & reports |
+| **Lifecycle Hooks** | Intercept any event — full observability |
+| **Browser Automation** | Playwright-powered — test any web app |
+| **SQLite Persistence** | Full execution history — audit everything |
+
+---
+
+## 🚀 Quick Start
+
+```bash
+# Clone and run in 30 seconds
+git clone https://github.com/chelslava/autoflow-net.git
+cd autoflow-net
+dotnet run --project src/AutoFlow.Cli -- run examples/flow.yaml
+```
+
+**Prerequisites:** [.NET 10 SDK](https://dotnet.microsoft.com/download)
+
+---
+
+## 📖 Real-world Example
+
+### Parallel API Fetch with Retry
+
+```yaml
+schema_version: 1
+name: data_pipeline
+
+variables:
+  api_base: https://api.example.com
+
+tasks:
+  main:
+    on_error:
+      - step: { id: alert, uses: log.info, with: { message: "❌ Pipeline failed!" } }
+    
+    finally:
+      - step: { id: cleanup, uses: log.info, with: { message: "🧹 Cleanup done" } }
+    
+    steps:
+      # Fetch in parallel — 3 concurrent requests
       - parallel:
           id: fetch_data
           max_concurrency: 3
           steps:
             - step:
-                id: fetch_users
+                id: users
                 uses: http.request
-                with:
-                  url: "${api_url}/users"
-                  method: GET
-
+                with: { url: "${api_base}/users", method: GET }
+                save_as: { body: users_data }
+            
             - step:
-                id: fetch_posts
+                id: posts
                 uses: http.request
-                with:
-                  url: "${api_url}/posts"
-                  method: GET
-
+                with: { url: "${api_base}/posts", method: GET }
+                save_as: { body: posts_data }
+      
+      # Auto-retry with exponential backoff
       - step:
-          id: call_api
+          id: unstable_endpoint
           uses: http.request
-          with:
-            url: "${api_url}/data"
-            method: GET
+          with: { url: "${api_base}/flaky", method: GET }
           retry:
             attempts: 5
             type: exponential
@@ -125,99 +117,260 @@ tasks:
             max_delay: "30s"
 ```
 
-## Available Keywords
-
-### Logging & Files
-
-| Keyword | Description |
-|---------|-------------|
-| `log.info` | Log a message |
-| `files.read` | Read file contents |
-| `files.write` | Write string to file |
-| `files.exists` | Check file existence |
-| `files.delete` | Delete a file |
-
-### HTTP & JSON
-
-| Keyword | Description |
-|---------|-------------|
-| `http.request` | Execute HTTP request |
-| `json.parse` | Parse JSON and extract value |
-
 ### Browser Automation
 
-| Keyword | Description |
-|---------|-------------|
-| `browser.open` | Open browser (Chromium/Firefox/WebKit) |
-| `browser.close` | Close browser instance |
-| `browser.goto` | Navigate to URL |
-| `browser.click` | Click element |
-| `browser.fill` | Fill input field |
-| `browser.wait` | Wait for element |
-| `browser.get_text` | Get element text |
-| `browser.assert_text` | Assert page text |
-| `browser.assert_visible` | Check element visibility |
-| `browser.screenshot` | Capture page screenshot |
+```yaml
+schema_version: 1
+name: login_test
 
-## Creating Custom Keywords
-
-1. Create an arguments class:
-
-```csharp
-public class MyKeywordArgs
-{
-    public string Param { get; set; } = "";
-}
+tasks:
+  main:
+    steps:
+      - step:
+          id: open_browser
+          uses: browser.open
+          with: { browser: chromium, headless: true }
+          save_as: { browserId: browser_id }
+      
+      - step:
+          id: navigate
+          uses: browser.goto
+          with: { browserId: "${browser_id}", url: "https://app.example.com/login" }
+      
+      - step:
+          id: fill_credentials
+          uses: browser.fill
+          with:
+            browserId: "${browser_id}"
+            selector: "#email"
+            value: "${secret:TEST_USER_EMAIL}"
+      
+      - step:
+          id: submit
+          uses: browser.click
+          with: { browserId: "${browser_id}", selector: "button[type=submit]" }
+      
+      - step:
+          id: verify
+          uses: browser.assert_text
+          with: { browserId: "${browser_id}", selector: ".welcome", expected: "Welcome" }
 ```
 
-2. Create a handler:
+---
+
+## 🔧 CLI Commands
+
+```bash
+# Run a workflow
+dotnet run --project src/AutoFlow.Cli -- run workflow.yaml
+
+# Generate HTML report
+dotnet run --project src/AutoFlow.Cli -- run workflow.yaml --output report.html
+
+# Validate before running
+dotnet run --project src/AutoFlow.Cli -- validate workflow.yaml
+
+# View execution history
+dotnet run --project src/AutoFlow.Cli -- history --status Failed
+
+# Get statistics
+dotnet run --project src/AutoFlow.Cli -- stats --days 7
+
+# List available keywords
+dotnet run --project src/AutoFlow.Cli -- list-keywords
+```
+
+---
+
+## 🧩 Available Keywords
+
+### HTTP & Data
+
+| Keyword | Description |
+|---------|-------------|
+| `http.request` | HTTP/HTTPS requests with full control |
+| `json.parse` | Extract values from JSON |
+
+### Files
+
+| Keyword | Description |
+|---------|-------------|
+| `files.read` | Read file contents |
+| `files.write` | Write to files |
+| `files.exists` | Check file existence |
+| `files.delete` | Delete files |
+
+### Browser (Playwright)
+
+| Keyword | Description |
+|---------|-------------|
+| `browser.open` | Launch Chromium/Firefox/WebKit |
+| `browser.goto` | Navigate to URL |
+| `browser.click` | Click elements |
+| `browser.fill` | Fill form fields |
+| `browser.wait` | Wait for elements |
+| `browser.screenshot` | Capture screenshots |
+| `browser.assert_text` | Verify page content |
+| `browser.evaluate` | Execute JavaScript |
+
+### Control Flow
+
+| Keyword | Description |
+|---------|-------------|
+| `if` | Conditional execution |
+| `for_each` | Loop over items |
+| `parallel` | Concurrent execution |
+| `call` | Reusable tasks |
+| `group` | Logical grouping |
+
+---
+
+## 🔐 Security First
+
+### Path Traversal Protection
+File operations automatically reject `../` and absolute paths outside allowed directories.
+
+### SSRF Protection
+HTTP requests to `localhost`, `192.168.x.x`, `10.x.x.x` blocked by default. Enable explicitly with `allowPrivateNetworks: true`.
+
+### Secret Masking
+Secrets are automatically masked in logs and reports:
+
+```
+[INFO] Calling API with token: ***
+```
+
+---
+
+## 🔌 Extend with Custom Keywords
 
 ```csharp
-[Keyword("my.keyword", Category = "MyCategory", Description = "Description")]
-public class MyKeyword : IKeywordHandler<MyKeywordArgs>
+[Keyword("slack.notify", Category = "Notifications", Description = "Send Slack message")]
+public class SlackNotifyKeyword : IKeywordHandler<SlackNotifyArgs>
 {
-    public Task<KeywordResult> ExecuteAsync(
-        MyKeywordArgs args,
+    public async Task<KeywordResult> ExecuteAsync(
         KeywordContext context,
-        CancellationToken cancellationToken = default)
+        SlackNotifyArgs args,
+        CancellationToken ct = default)
     {
-        // Implementation
-        return Task.FromResult(KeywordResult.Success($"Result: {args.Param}"));
+        // Your logic here
+        return KeywordResult.Success(new { messageId = "msg_123" });
     }
 }
 ```
 
-3. Register in CLI:
+Register and use:
 
-```csharp
-registry.RegisterKeywordsFromAssembly(typeof(MyKeyword).Assembly);
+```yaml
+- step:
+    id: notify_team
+    uses: slack.notify
+    with:
+      channel: "#deployments"
+      message: "Deploy complete! 🚀"
 ```
 
-## Project Structure
+---
+
+## 📊 Architecture
 
 ```
-AutoFlow.sln
+┌─────────────────────────────────────────────────────────┐
+│                     YAML Workflow                        │
+└─────────────────────┬───────────────────────────────────┘
+                      ▼
+┌─────────────────────────────────────────────────────────┐
+│                    Parser (AST)                          │
+└─────────────────────┬───────────────────────────────────┘
+                      ▼
+┌─────────────────────────────────────────────────────────┐
+│                   Validation                             │
+└─────────────────────┬───────────────────────────────────┘
+                      ▼
+┌─────────────────────────────────────────────────────────┐
+│                   Runtime Engine                         │
+│  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐     │
+│  │   Secrets   │  │   Hooks     │  │  Variables  │     │
+│  └─────────────┘  └─────────────┘  └─────────────┘     │
+└─────────────────────┬───────────────────────────────────┘
+                      ▼
+┌─────────────────────────────────────────────────────────┐
+│              Keyword Executors                           │
+│  ┌────────┐ ┌────────┐ ┌────────┐ ┌────────┐           │
+│  │  HTTP  │ │ Files  │ │Browser │ │ Custom │           │
+│  └────────┘ └────────┘ └────────┘ └────────┘           │
+└─────────────────────────────────────────────────────────┘
+```
+
+---
+
+## 📦 Project Structure
+
+```
+AutoFlow.NET/
 ├── src/
-│   ├── AutoFlow.Abstractions/    # Contracts and models
-│   ├── AutoFlow.Parser/          # YAML → AST parser
+│   ├── AutoFlow.Abstractions/    # Core contracts
 │   ├── AutoFlow.Runtime/         # Execution engine
-│   ├── AutoFlow.Validation/      # Workflow validation
-│   ├── AutoFlow.Reporting/       # Report generators
+│   ├── AutoFlow.Parser/          # YAML → AST
+│   ├── AutoFlow.Validation/      # Schema validation
+│   ├── AutoFlow.Reporting/       # JSON/HTML reports
 │   ├── AutoFlow.Database/        # SQLite persistence
-│   └── AutoFlow.Cli/             # CLI entry point
+│   └── AutoFlow.Cli/             # Command-line tool
 ├── libraries/
-│   ├── AutoFlow.Library.Assertions/
-│   ├── AutoFlow.Library.Files/
-│   ├── AutoFlow.Library.Http/
-│   └── AutoFlow.Library.Browser/
-├── tests/
-└── examples/
+│   ├── AutoFlow.Library.Http/    # HTTP keywords
+│   ├── AutoFlow.Library.Files/   # File keywords
+│   └── AutoFlow.Library.Browser/ # Browser keywords
+└── tests/                        # Test projects
 ```
 
-## Contributing
+---
 
-See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
+## 🗺️ Roadmap
 
-## License
+| Feature | Status |
+|---------|--------|
+| YAML Parser | ✅ |
+| Control Flow (if/foreach/call) | ✅ |
+| Parallel Execution | ✅ |
+| Lifecycle Hooks | ✅ |
+| Secrets Management | ✅ |
+| Browser Automation | ✅ |
+| SQLite Persistence | ✅ |
+| Expression Language | 🚧 |
+| Visual Workflow Editor | 📋 Planned |
+| Cloud Execution | 📋 Planned |
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+---
+
+## 🤝 Contributing
+
+We welcome contributions! See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
+
+1. Fork the repo
+2. Create your feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit your changes (`git commit -m 'feat: add amazing feature'`)
+4. Push to the branch (`git push origin feature/amazing-feature`)
+5. Open a Pull Request
+
+---
+
+## 📄 License
+
+MIT License — use it for anything, commercial or personal.
+
+---
+
+## 💬 Community
+
+- **Issues**: [GitHub Issues](https://github.com/chelslava/autoflow-net/issues)
+- **Discussions**: [GitHub Discussions](https://github.com/chelslava/autoflow-net/discussions)
+
+---
+
+<p align="center">
+  <strong>Made with ❤️ for automation engineers</strong>
+</p>
+
+<p align="center">
+  <a href="#-quick-start">Get started in 30 seconds →</a>
+</p>
