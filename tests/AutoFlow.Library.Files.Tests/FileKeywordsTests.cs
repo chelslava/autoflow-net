@@ -58,7 +58,9 @@ public sealed class FileKeywordsTests : IDisposable
         var result = await keyword.ExecuteAsync(CreateContext(), args);
 
         Assert.True(result.IsSuccess);
-        Assert.Equal("Hello, AutoFlow!", result.Outputs);
+        var output = result.Outputs as dynamic;
+        Assert.NotNull(output);
+        Assert.Equal("Hello, AutoFlow!", output!.content);
     }
 
     [Fact]
@@ -162,7 +164,9 @@ public sealed class FileKeywordsTests : IDisposable
         var result = await keyword.ExecuteAsync(CreateContext(), args);
 
         Assert.True(result.IsSuccess);
-        Assert.True((bool)result.Outputs!);
+        var output = result.Outputs as dynamic;
+        Assert.NotNull(output);
+        Assert.True(output!.exists);
     }
 
     [Fact]
@@ -174,7 +178,9 @@ public sealed class FileKeywordsTests : IDisposable
         var result = await keyword.ExecuteAsync(CreateContext(), args);
 
         Assert.True(result.IsSuccess);
-        Assert.False((bool)result.Outputs!);
+        var output = result.Outputs as dynamic;
+        Assert.NotNull(output);
+        Assert.False(output!.exists);
     }
 
     [Fact]
@@ -186,7 +192,9 @@ public sealed class FileKeywordsTests : IDisposable
         var result = await keyword.ExecuteAsync(CreateContext(), args);
 
         Assert.True(result.IsSuccess);
-        Assert.False((bool)result.Outputs!);
+        var output = result.Outputs as dynamic;
+        Assert.NotNull(output);
+        Assert.False(output!.exists);
     }
 
     [Fact]

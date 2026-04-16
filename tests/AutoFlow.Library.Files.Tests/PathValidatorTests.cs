@@ -146,7 +146,7 @@ public sealed class PathValidatorTests : IDisposable
     }
 
     [Fact]
-    public void ValidatePath_PathTooLong_ReturnsInvalid()
+    public void ValidatePath_PathTooLong_HandlesGracefully()
     {
         var longPath = new string('a', 300);
 

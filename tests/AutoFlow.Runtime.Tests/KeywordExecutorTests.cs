@@ -97,12 +97,12 @@ public sealed class KeywordExecutorTests
     }
 
     [Fact]
-    public async Task ExecuteAsync_UnknownKeyword_ThrowsInvalidOperationException()
+    public async Task ExecuteAsync_UnknownKeyword_ThrowsKeyNotFoundException()
     {
         var executor = new KeywordExecutor(_serviceProvider, _registry);
         var context = CreateExecutionContext();
 
-        await Assert.ThrowsAsync<InvalidOperationException>(() =>
+        await Assert.ThrowsAsync<KeyNotFoundException>(() =>
             executor.ExecuteAsync(context, "step1", "unknown.keyword", null));
     }
 
