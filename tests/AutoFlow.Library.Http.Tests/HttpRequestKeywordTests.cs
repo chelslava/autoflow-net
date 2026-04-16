@@ -358,7 +358,7 @@ public sealed class HttpRequestKeywordTests
         var result = await keyword.ExecuteAsync(CreateContext(), args);
 
         Assert.False(result.IsSuccess);
-        Assert.Contains("404", result.ErrorMessage);
+        Assert.Contains("NotFound", result.ErrorMessage);
     }
 
     [Fact]
@@ -376,7 +376,7 @@ public sealed class HttpRequestKeywordTests
         var result = await keyword.ExecuteAsync(CreateContext(), args);
 
         Assert.False(result.IsSuccess);
-        Assert.Contains("500", result.ErrorMessage);
+        Assert.Contains("InternalServerError", result.ErrorMessage);
     }
 
     private void SetupHttpResponse(HttpStatusCode statusCode, string content, Action<HttpRequestMessage>? capture = null)

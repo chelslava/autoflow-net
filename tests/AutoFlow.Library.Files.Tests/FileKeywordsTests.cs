@@ -53,7 +53,7 @@ public sealed class FileKeywordsTests : IDisposable
     public async Task FileRead_ExistingFile_ReturnsContent()
     {
         var keyword = new FileReadKeyword();
-        var args = new FileReadArgs { Path = _testFile };
+        var args = new FileReadArgs { Path = "test.txt", BasePath = _testDir };
 
         var result = await keyword.ExecuteAsync(CreateContext(), args);
 
@@ -67,7 +67,7 @@ public sealed class FileKeywordsTests : IDisposable
     public async Task FileRead_NonExistingFile_ReturnsFailure()
     {
         var keyword = new FileReadKeyword();
-        var args = new FileReadArgs { Path = Path.Combine(_testDir, "nonexistent.txt") };
+        var args = new FileReadArgs { Path = "nonexistent.txt", BasePath = _testDir };
 
         var result = await keyword.ExecuteAsync(CreateContext(), args);
 
@@ -79,7 +79,7 @@ public sealed class FileKeywordsTests : IDisposable
     public async Task FileRead_PathTraversal_ReturnsFailure()
     {
         var keyword = new FileReadKeyword();
-        var args = new FileReadArgs { Path = "../../../etc/passwd" };
+        var args = new FileReadArgs { Path = "../../../etc/passwd", BasePath = _testDir };
 
         var result = await keyword.ExecuteAsync(CreateContext(), args);
 
@@ -90,7 +90,7 @@ public sealed class FileKeywordsTests : IDisposable
     public async Task FileRead_EmptyPath_ReturnsFailure()
     {
         var keyword = new FileReadKeyword();
-        var args = new FileReadArgs { Path = "" };
+        var args = new FileReadArgs { Path = "", BasePath = _testDir };
 
         var result = await keyword.ExecuteAsync(CreateContext(), args);
 
@@ -105,21 +105,21 @@ public sealed class FileKeywordsTests : IDisposable
     public async Task FileWrite_NewFile_CreatesFile()
     {
         var keyword = new FileWriteKeyword();
-        var newFile = Path.Combine(_testDir, "new.txt");
-        var args = new FileWriteArgs { Path = newFile, Content = "New content" };
+        var args = new FileWriteArgs { Path = "new.txt", Content = "New content", BasePath = _testDir };
 
         var result = await keyword.ExecuteAsync(CreateContext(), args);
 
         Assert.True(result.IsSuccess);
-        Assert.True(File.Exists(newFile));
-        Assert.Equal("New content", File.ReadAllText(newFile));
+        var fullPath = Path.Combine(_testDir, "new.txt");
+        Assert.True(File.Exists(fullPath));
+        Assert.Equal("New content", File.ReadAllText(fullPath));
     }
 
     [Fact]
     public async Task FileWrite_ExistingFile_OverwritesContent()
     {
         var keyword = new FileWriteKeyword();
-        var args = new FileWriteArgs { Path = _testFile, Content = "Overwritten" };
+        var args = new FileWriteArgs { Path = "test.txt", Content = "Overwritten", BasePath = _testDir };
 
         var result = await keyword.ExecuteAsync(CreateContext(), args);
 
@@ -131,7 +131,7 @@ public sealed class FileKeywordsTests : IDisposable
     public async Task FileWrite_PathTraversal_ReturnsFailure()
     {
         var keyword = new FileWriteKeyword();
-        var args = new FileWriteArgs { Path = "../../../tmp/malicious.txt", Content = "hack" };
+        var args = new FileWriteArgs { Path = "../../../tmp/malicious.txt", Content = "hack", BasePath = _testDir };
 
         var result = await keyword.ExecuteAsync(CreateContext(), args);
 
@@ -142,13 +142,13 @@ public sealed class FileKeywordsTests : IDisposable
     public async Task FileWrite_CreatesDirectoryIfNotExists()
     {
         var keyword = new FileWriteKeyword();
-        var nestedFile = Path.Combine(_testDir, "nested", "dir", "file.txt");
-        var args = new FileWriteArgs { Path = nestedFile, Content = "nested content" };
+        var args = new FileWriteArgs { Path = "nested/dir/file.txt", Content = "nested content", BasePath = _testDir };
 
         var result = await keyword.ExecuteAsync(CreateContext(), args);
 
         Assert.True(result.IsSuccess);
-        Assert.True(File.Exists(nestedFile));
+        var fullPath = Path.Combine(_testDir, "nested", "dir", "file.txt");
+        Assert.True(File.Exists(fullPath));
     }
 
     #endregion
@@ -159,7 +159,7 @@ public sealed class FileKeywordsTests : IDisposable
     public async Task FileExists_ExistingFile_ReturnsTrue()
     {
         var keyword = new FileExistsKeyword();
-        var args = new FileExistsArgs { Path = _testFile };
+        var args = new FileExistsArgs { Path = "test.txt", BasePath = _testDir };
 
         var result = await keyword.ExecuteAsync(CreateContext(), args);
 
@@ -173,7 +173,7 @@ public sealed class FileKeywordsTests : IDisposable
     public async Task FileExists_NonExistingFile_ReturnsFalse()
     {
         var keyword = new FileExistsKeyword();
-        var args = new FileExistsArgs { Path = Path.Combine(_testDir, "nonexistent.txt") };
+        var args = new FileExistsArgs { Path = "nonexistent.txt", BasePath = _testDir };
 
         var result = await keyword.ExecuteAsync(CreateContext(), args);
 
@@ -187,7 +187,7 @@ public sealed class FileKeywordsTests : IDisposable
     public async Task FileExists_Directory_ReturnsFalse()
     {
         var keyword = new FileExistsKeyword();
-        var args = new FileExistsArgs { Path = _testDir };
+        var args = new FileExistsArgs { Path = ".", BasePath = _testDir };
 
         var result = await keyword.ExecuteAsync(CreateContext(), args);
 
@@ -201,7 +201,7 @@ public sealed class FileKeywordsTests : IDisposable
     public async Task FileExists_PathTraversal_ReturnsFailure()
     {
         var keyword = new FileExistsKeyword();
-        var args = new FileExistsArgs { Path = "../../../etc/passwd" };
+        var args = new FileExistsArgs { Path = "../../../etc/passwd", BasePath = _testDir };
 
         var result = await keyword.ExecuteAsync(CreateContext(), args);
 
@@ -219,7 +219,7 @@ public sealed class FileKeywordsTests : IDisposable
         File.WriteAllText(deleteFile, "delete me");
 
         var keyword = new FileDeleteKeyword();
-        var args = new FileDeleteArgs { Path = deleteFile };
+        var args = new FileDeleteArgs { Path = "to_delete.txt", BasePath = _testDir };
 
         var result = await keyword.ExecuteAsync(CreateContext(), args);
 
@@ -231,7 +231,7 @@ public sealed class FileKeywordsTests : IDisposable
     public async Task FileDelete_NonExistingFile_ReturnsFailure()
     {
         var keyword = new FileDeleteKeyword();
-        var args = new FileDeleteArgs { Path = Path.Combine(_testDir, "nonexistent.txt") };
+        var args = new FileDeleteArgs { Path = "nonexistent.txt", BasePath = _testDir };
 
         var result = await keyword.ExecuteAsync(CreateContext(), args);
 
@@ -242,7 +242,7 @@ public sealed class FileKeywordsTests : IDisposable
     public async Task FileDelete_PathTraversal_ReturnsFailure()
     {
         var keyword = new FileDeleteKeyword();
-        var args = new FileDeleteArgs { Path = "../../../etc/passwd" };
+        var args = new FileDeleteArgs { Path = "../../../etc/passwd", BasePath = _testDir };
 
         var result = await keyword.ExecuteAsync(CreateContext(), args);
 

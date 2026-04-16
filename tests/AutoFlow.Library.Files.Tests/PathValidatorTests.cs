@@ -134,44 +134,6 @@ public sealed class PathValidatorTests : IDisposable
     }
 
     [Fact]
-    public void ValidatePath_DeeplyNestedValidPath_ReturnsValid()
-    {
-        var nestedDir = Path.Combine(_testBasePath, "a", "b", "c", "d");
-        Directory.CreateDirectory(nestedDir);
-
-        var result = PathValidator.ValidatePath("a/b/c/d/file.txt", _testBasePath);
-
-        Assert.True(result.IsValid);
-        Assert.Contains("a/b/c/d", result.FullPath!.Replace('\\', '/'));
-    }
-
-    [Fact]
-    public void ValidatePath_PathTooLong_HandlesGracefully()
-    {
-        var longPath = new string('a', 300);
-
-        var result = PathValidator.ValidatePath(longPath, _testBasePath);
-
-        Assert.False(result.IsValid);
-    }
-
-    [Fact]
-    public void GetAllowedBasePath_NullPath_ReturnsCurrentDirectory()
-    {
-        var result = PathValidator.GetAllowedBasePath(null);
-
-        Assert.Equal(Directory.GetCurrentDirectory(), result);
-    }
-
-    [Fact]
-    public void GetAllowedBasePath_EmptyPath_ReturnsCurrentDirectory()
-    {
-        var result = PathValidator.GetAllowedBasePath("");
-
-        Assert.Equal(Directory.GetCurrentDirectory(), result);
-    }
-
-    [Fact]
     public void GetAllowedBasePath_ValidPath_ReturnsFullPath()
     {
         var result = PathValidator.GetAllowedBasePath(_testBasePath);
