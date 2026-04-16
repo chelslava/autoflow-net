@@ -12,9 +12,10 @@ public sealed class FileWriteArgs
     public string Content { get; set; } = string.Empty;
     public bool Append { get; set; }
     public string? Encoding { get; set; }
+    public string? BasePath { get; set; }
 }
 
-[Keyword("files.write", Category = "Files", Description = "Записывает строку в файл.")]
+[Keyword("files.write", Category = "Files", Description = "Writes a string to a file.")]
 public sealed class FileWriteKeyword : IKeywordHandler<FileWriteArgs>
 {
     public Task<KeywordResult> ExecuteAsync(
@@ -22,10 +23,18 @@ public sealed class FileWriteKeyword : IKeywordHandler<FileWriteArgs>
         FileWriteArgs args,
         CancellationToken cancellationToken = default)
     {
-        var path = args.Path;
-        var content = args.Content;
+        var basePath = PathValidator.GetAllowedBasePath(args.BasePath);
+        var (isValid, fullPath, errorMessage) = PathValidator.ValidatePath(args.Path, basePath);
 
-        var directory = Path.GetDirectoryName(path);
+        if (!isValid)
+        {
+            context.Logger.LogWarning("Path validation failed: {Error}", errorMessage);
+            return Task.FromResult(KeywordResult.Failure(errorMessage ?? "Invalid path"));
+        }
+
+        var content = args.Content;
+        var directory = Path.GetDirectoryName(fullPath);
+        
         if (!string.IsNullOrEmpty(directory) && !Directory.Exists(directory))
         {
             Directory.CreateDirectory(directory);
@@ -40,20 +49,20 @@ public sealed class FileWriteKeyword : IKeywordHandler<FileWriteArgs>
 
         if (args.Append)
         {
-            File.AppendAllText(path, content, encoding);
+            File.AppendAllText(fullPath, content, encoding);
         }
         else
         {
-            File.WriteAllText(path, content, encoding);
+            File.WriteAllText(fullPath, content, encoding);
         }
 
         context.Logger.LogInformation(
-            "Записан файл {Path}, размер: {Size} символов",
-            path, content.Length);
+            "Wrote file {Path}, size: {Size} characters",
+            args.Path, content.Length);
 
         return Task.FromResult(
             KeywordResult.Success(
-                new { path, size = content.Length },
-                [$"Wrote {content.Length} chars to {path}"]));
+                new { path = args.Path, size = content.Length },
+                [$"Wrote {content.Length} chars to {args.Path}"]));
     }
 }

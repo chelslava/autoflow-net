@@ -1,4 +1,4 @@
-# Сборка
+# Build outputs
 bin/
 obj/
 out/
@@ -8,6 +8,8 @@ TestResults/
 .vs/
 .vscode/
 .idea/
+*.user
+*.suo
 
 # OS
 .DS_Store
@@ -17,19 +19,28 @@ Thumbs.db
 playwright-report/
 test-results/
 ms-playwright/
+.playwright/
 
-# Локальные файлы
-*.user
-*.suo
-*.cache
-*.tmp
+# Logs and temp files
 *.log
+*.tmp
+*.cache
 
-# LSGlobal cache файлы
+# Build artifacts
 *.lscache
+publish/
 
-# Kilo (IDE plugin служебные файлы)
+# Local data
+data/
+*.db
+*.db-shm
+*.db-wal
+
+# Reports (generated)
+reports/
+
+# Kilo IDE
 .kilo/
 
-# Документация с ТЗ
+# Documentation (private)
 doc/

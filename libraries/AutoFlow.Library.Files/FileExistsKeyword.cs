@@ -9,9 +9,10 @@ namespace AutoFlow.Library.Files;
 public sealed class FileExistsArgs
 {
     public string Path { get; set; } = string.Empty;
+    public string? BasePath { get; set; }
 }
 
-[Keyword("files.exists", Category = "Files", Description = "Проверяет существование файла.")]
+[Keyword("files.exists", Category = "Files", Description = "Checks if a file exists.")]
 public sealed class FileExistsKeyword : IKeywordHandler<FileExistsArgs>
 {
     public Task<KeywordResult> ExecuteAsync(
@@ -19,16 +20,24 @@ public sealed class FileExistsKeyword : IKeywordHandler<FileExistsArgs>
         FileExistsArgs args,
         CancellationToken cancellationToken = default)
     {
-        var path = args.Path;
-        var exists = File.Exists(path);
+        var basePath = PathValidator.GetAllowedBasePath(args.BasePath);
+        var (isValid, fullPath, errorMessage) = PathValidator.ValidatePath(args.Path, basePath);
+
+        if (!isValid)
+        {
+            context.Logger.LogWarning("Path validation failed: {Error}", errorMessage);
+            return Task.FromResult(KeywordResult.Failure(errorMessage ?? "Invalid path"));
+        }
+
+        var exists = File.Exists(fullPath);
 
         context.Logger.LogInformation(
-            "Проверка файла {Path}: {Exists}",
-            path, exists ? "существует" : "не найден");
+            "Checked file {Path}: {Exists}",
+            args.Path, exists ? "exists" : "not found");
 
         return Task.FromResult(
             KeywordResult.Success(
-                new { exists, path },
+                new { exists, path = args.Path },
                 [$"File exists: {exists}"]));
     }
 }

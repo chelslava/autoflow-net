@@ -6,6 +6,9 @@ on:
   pull_request:
     branches: [ main ]
 
+env:
+  DOTNET_VERSION: '10.0.x'
+
 jobs:
   build-test:
     runs-on: ubuntu-latest
@@ -14,10 +17,18 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Setup .NET 10
+      - name: Setup .NET
         uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: '10.0.x'
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      - name: Cache NuGet packages
+        uses: actions/cache@v4
+        with:
+          path: ~/.nuget/packages
+          key: ${{ runner.os }}-nuget-${{ hashFiles('**/Directory.Packages.props', '**/*.csproj') }}
+          restore-keys: |
+            ${{ runner.os }}-nuget-
 
       - name: Restore
         run: dotnet restore
@@ -26,7 +37,14 @@ jobs:
         run: dotnet build --no-restore --configuration Release
 
       - name: Test
-        run: dotnet test --no-build --configuration Release --filter "FullyQualifiedName!~Browser"
+        run: dotnet test --no-build --configuration Release --filter "FullyQualifiedName!~Browser" --collect:"XPlat Code Coverage"
+
+      - name: Upload coverage
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage
+          path: ./TestResults/*/coverage.cobertura.xml
+          retention-days: 7
 
       - name: Publish Linux-x64
         run: dotnet publish src/AutoFlow.Cli/AutoFlow.Cli.csproj -c Release -o ./publish-linux /p:PublishSingleFile=true /p:SelfContained=true /p:RuntimeIdentifier=linux-x64
@@ -45,10 +63,18 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Setup .NET 10
+      - name: Setup .NET
         uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: '10.0.x'
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      - name: Cache NuGet packages
+        uses: actions/cache@v4
+        with:
+          path: ~/.nuget/packages
+          key: ${{ runner.os }}-nuget-${{ hashFiles('**/Directory.Packages.props', '**/*.csproj') }}
+          restore-keys: |
+            ${{ runner.os }}-nuget-
 
       - name: Restore
         run: dotnet restore
@@ -58,9 +84,32 @@ jobs:
 
       - name: Validate example workflows
         run: |
+          validation_failed=false
           for file in examples/*.yaml; do
             if [[ "$file" != *"browser"* ]]; then
               echo "Validating $file"
-              dotnet run --project src/AutoFlow.Cli --no-build -- validate "$file" || true
+              if ! dotnet run --project src/AutoFlow.Cli --no-build -- validate "$file"; then
+                validation_failed=true
+                echo "::warning::Validation failed for $file"
+              fi
             fi
           done
+          if [ "$validation_failed" = true ]; then
+            echo "::error::One or more workflow validations failed"
+            exit 1
+          fi
+
+  lint:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      - name: Verify formatting
+        run: dotnet format --verify-no-changes --severity warn

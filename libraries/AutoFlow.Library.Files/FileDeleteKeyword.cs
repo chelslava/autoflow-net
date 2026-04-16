@@ -9,9 +9,10 @@ namespace AutoFlow.Library.Files;
 public sealed class FileDeleteArgs
 {
     public string Path { get; set; } = string.Empty;
+    public string? BasePath { get; set; }
 }
 
-[Keyword("files.delete", Category = "Files", Description = "Удаляет файл.")]
+[Keyword("files.delete", Category = "Files", Description = "Deletes a file.")]
 public sealed class FileDeleteKeyword : IKeywordHandler<FileDeleteArgs>
 {
     public Task<KeywordResult> ExecuteAsync(
@@ -19,24 +20,31 @@ public sealed class FileDeleteKeyword : IKeywordHandler<FileDeleteArgs>
         FileDeleteArgs args,
         CancellationToken cancellationToken = default)
     {
-        var path = args.Path;
+        var basePath = PathValidator.GetAllowedBasePath(args.BasePath);
+        var (isValid, fullPath, errorMessage) = PathValidator.ValidatePath(args.Path, basePath);
 
-        if (!File.Exists(path))
+        if (!isValid)
         {
-            context.Logger.LogWarning("Файл не найден для удаления: {Path}", path);
-            return Task.FromResult(
-                KeywordResult.Success(
-                    new { deleted = false, path },
-                    [$"File not found: {path}"]));
+            context.Logger.LogWarning("Path validation failed: {Error}", errorMessage);
+            return Task.FromResult(KeywordResult.Failure(errorMessage ?? "Invalid path"));
         }
 
-        File.Delete(path);
+        if (!File.Exists(fullPath))
+        {
+            context.Logger.LogWarning("File not found for deletion: {Path}", args.Path);
+            return Task.FromResult(
+                KeywordResult.Success(
+                    new { deleted = false, path = args.Path },
+                    [$"File not found: {args.Path}"]));
+        }
 
-        context.Logger.LogInformation("Файл удалён: {Path}", path);
+        File.Delete(fullPath);
+
+        context.Logger.LogInformation("File deleted: {Path}", args.Path);
 
         return Task.FromResult(
             KeywordResult.Success(
-                new { deleted = true, path },
-                [$"Deleted: {path}"]));
+                new { deleted = true, path = args.Path },
+                [$"Deleted: {args.Path}"]));
     }
 }

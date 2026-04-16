@@ -10,9 +10,10 @@ public sealed class FileReadArgs
 {
     public string Path { get; set; } = string.Empty;
     public string? Encoding { get; set; }
+    public string? BasePath { get; set; }
 }
 
-[Keyword("files.read", Category = "Files", Description = "Читает содержимое файла в строку.")]
+[Keyword("files.read", Category = "Files", Description = "Reads file contents into a string.")]
 public sealed class FileReadKeyword : IKeywordHandler<FileReadArgs>
 {
     public Task<KeywordResult> ExecuteAsync(
@@ -20,12 +21,19 @@ public sealed class FileReadKeyword : IKeywordHandler<FileReadArgs>
         FileReadArgs args,
         CancellationToken cancellationToken = default)
     {
-        var path = args.Path;
+        var basePath = PathValidator.GetAllowedBasePath(args.BasePath);
+        var (isValid, fullPath, errorMessage) = PathValidator.ValidatePath(args.Path, basePath);
 
-        if (!File.Exists(path))
+        if (!isValid)
+        {
+            context.Logger.LogWarning("Path validation failed: {Error}", errorMessage);
+            return Task.FromResult(KeywordResult.Failure(errorMessage ?? "Invalid path"));
+        }
+
+        if (!File.Exists(fullPath))
         {
             return Task.FromResult(
-                KeywordResult.Failure($"Файл не найден: {path}"));
+                KeywordResult.Failure($"File not found: {args.Path}"));
         }
 
         var encoding = args.Encoding?.ToLowerInvariant() switch
@@ -35,15 +43,15 @@ public sealed class FileReadKeyword : IKeywordHandler<FileReadArgs>
             _ => System.Text.Encoding.UTF8
         };
 
-        var content = File.ReadAllText(path, encoding);
+        var content = File.ReadAllText(fullPath, encoding);
 
         context.Logger.LogInformation(
-            "Прочитан файл {Path}, размер: {Size} символов",
-            path, content.Length);
+            "Read file {Path}, size: {Size} characters",
+            args.Path, content.Length);
 
         return Task.FromResult(
             KeywordResult.Success(
-                new { content, path },
-                [$"Read {content.Length} chars from {path}"]));
+                new { content, path = args.Path },
+                [$"Read {content.Length} chars from {args.Path}"]));
     }
 }
