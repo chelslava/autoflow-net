@@ -1,0 +1,15 @@
+{
+  "blank_issues_enabled": false,
+  "contact_links": [
+    {
+      "name": "📖 Documentation",
+      "url": "https://github.com/chelslava/autoflow-net#readme",
+      "about": "Read the documentation for usage examples and API reference"
+    },
+    {
+      "name": "💬 Discussions",
+      "url": "https://github.com/chelslava/autoflow-net/discussions",
+      "about": "Ask questions and discuss ideas with the community"
+    }
+  ]
+}
