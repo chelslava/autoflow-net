@@ -8,7 +8,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
-- Initial public release preparation
 - Central Package Management via Directory.Packages.props
 - SDK version pinning via global.json
 - MIT License
@@ -17,15 +16,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Code of Conduct
 - Issue and PR templates
 - Security policy
-- GitHub Actions CI/CD with NuGet caching
-- Path traversal protection for file operations
-- URL validation for HTTP requests
+- GitHub Actions CI/CD with NuGet caching and coverage upload
+- Dependabot for dependency updates (NuGet + GitHub Actions)
+- CodeQL security analysis workflow
 - Configuration via appsettings.json
+- XML documentation for public API interfaces
+- Hierarchical AGENTS.md knowledge base for AI assistants
 
 ### Security
-- Fixed path traversal vulnerability in files.* keywords
-- Added URL scheme validation in http.request
-- Added private network access control for HTTP requests
+- Path traversal protection for file operations (files.read, files.write, files.exists, files.delete)
+- URL scheme validation in http.request (only http/https allowed)
+- Private network access control for HTTP requests (SSRF protection)
+- Secrets masking in logs and reports
 
 ## [0.1.0] - 2025-04-01
 
