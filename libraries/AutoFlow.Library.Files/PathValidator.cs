@@ -6,7 +6,7 @@ namespace AutoFlow.Library.Files;
 /// <summary>
 /// Provides path validation to prevent path traversal attacks.
 /// </summary>
-internal static class PathValidator
+public static class PathValidator
 {
     /// <summary>
     /// Validates that the path is within the allowed base directory.

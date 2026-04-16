@@ -7,6 +7,7 @@ using AutoFlow.Abstractions;
 using AutoFlow.Library.Http;
 using Microsoft.Extensions.Logging;
 using Moq;
+using Moq.Protected;
 using Xunit;
 
 namespace AutoFlow.Library.Http.Tests;
