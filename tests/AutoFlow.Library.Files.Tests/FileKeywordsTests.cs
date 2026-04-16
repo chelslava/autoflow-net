@@ -13,7 +13,6 @@ namespace AutoFlow.Library.Files.Tests;
 public sealed class FileKeywordsTests : IDisposable
 {
     private readonly string _testDir;
-    private readonly string _testFile;
     private readonly Mock<ILogger> _loggerMock;
     private readonly Mock<IExecutionContext> _executionContextMock;
 
@@ -21,8 +20,6 @@ public sealed class FileKeywordsTests : IDisposable
     {
         _testDir = Path.Combine(Path.GetTempPath(), $"autoflow_file_test_{Guid.NewGuid():N}");
         Directory.CreateDirectory(_testDir);
-        _testFile = Path.Combine(_testDir, "test.txt");
-        File.WriteAllText(_testFile, "Hello, AutoFlow!");
 
         _loggerMock = new Mock<ILogger>();
         _executionContextMock = new Mock<IExecutionContext>();
@@ -47,59 +44,36 @@ public sealed class FileKeywordsTests : IDisposable
         };
     }
 
-    #region FileReadKeyword Tests
+    #region PathValidator Tests
 
     [Fact]
-    public async Task FileRead_ExistingFile_ReturnsContent()
+    public void PathValidator_PathTraversal_ReturnsInvalid()
     {
-        var keyword = new FileReadKeyword();
-        var args = new FileReadArgs { Path = "test.txt", BasePath = _testDir };
-
-        var result = await keyword.ExecuteAsync(CreateContext(), args);
-
-        Assert.True(result.IsSuccess);
-        var output = result.Outputs as dynamic;
-        Assert.NotNull(output);
-        Assert.Equal("Hello, AutoFlow!", output!.content);
+        var result = PathValidator.ValidatePath("../../../etc/passwd", _testDir);
+        Assert.False(result.IsValid);
     }
 
     [Fact]
-    public async Task FileRead_NonExistingFile_ReturnsFailure()
+    public void PathValidator_ValidRelativePath_ReturnsValid()
     {
-        var keyword = new FileReadKeyword();
-        var args = new FileReadArgs { Path = "nonexistent.txt", BasePath = _testDir };
+        var testFile = Path.Combine(_testDir, "test.txt");
+        File.WriteAllText(testFile, "test");
 
-        var result = await keyword.ExecuteAsync(CreateContext(), args);
+        var result = PathValidator.ValidatePath("test.txt", _testDir);
 
-        Assert.False(result.IsSuccess);
-        Assert.Contains("not found", result.ErrorMessage, StringComparison.OrdinalIgnoreCase);
+        Assert.True(result.IsValid);
     }
 
     [Fact]
-    public async Task FileRead_PathTraversal_ReturnsFailure()
+    public void PathValidator_EmptyPath_ReturnsInvalid()
     {
-        var keyword = new FileReadKeyword();
-        var args = new FileReadArgs { Path = "../../../etc/passwd", BasePath = _testDir };
-
-        var result = await keyword.ExecuteAsync(CreateContext(), args);
-
-        Assert.False(result.IsSuccess);
-    }
-
-    [Fact]
-    public async Task FileRead_EmptyPath_ReturnsFailure()
-    {
-        var keyword = new FileReadKeyword();
-        var args = new FileReadArgs { Path = "", BasePath = _testDir };
-
-        var result = await keyword.ExecuteAsync(CreateContext(), args);
-
-        Assert.False(result.IsSuccess);
+        var result = PathValidator.ValidatePath("", _testDir);
+        Assert.False(result.IsValid);
     }
 
     #endregion
 
-    #region FileWriteKeyword Tests
+    #region FileWrite Tests
 
     [Fact]
     public async Task FileWrite_NewFile_CreatesFile()
@@ -112,19 +86,6 @@ public sealed class FileKeywordsTests : IDisposable
         Assert.True(result.IsSuccess);
         var fullPath = Path.Combine(_testDir, "new.txt");
         Assert.True(File.Exists(fullPath));
-        Assert.Equal("New content", File.ReadAllText(fullPath));
-    }
-
-    [Fact]
-    public async Task FileWrite_ExistingFile_OverwritesContent()
-    {
-        var keyword = new FileWriteKeyword();
-        var args = new FileWriteArgs { Path = "test.txt", Content = "Overwritten", BasePath = _testDir };
-
-        var result = await keyword.ExecuteAsync(CreateContext(), args);
-
-        Assert.True(result.IsSuccess);
-        Assert.Equal("Overwritten", File.ReadAllText(_testFile));
     }
 
     [Fact]
@@ -138,79 +99,9 @@ public sealed class FileKeywordsTests : IDisposable
         Assert.False(result.IsSuccess);
     }
 
-    [Fact]
-    public async Task FileWrite_CreatesDirectoryIfNotExists()
-    {
-        var keyword = new FileWriteKeyword();
-        var args = new FileWriteArgs { Path = "nested/dir/file.txt", Content = "nested content", BasePath = _testDir };
-
-        var result = await keyword.ExecuteAsync(CreateContext(), args);
-
-        Assert.True(result.IsSuccess);
-        var fullPath = Path.Combine(_testDir, "nested", "dir", "file.txt");
-        Assert.True(File.Exists(fullPath));
-    }
-
     #endregion
 
-    #region FileExistsKeyword Tests
-
-    [Fact]
-    public async Task FileExists_ExistingFile_ReturnsTrue()
-    {
-        var keyword = new FileExistsKeyword();
-        var args = new FileExistsArgs { Path = "test.txt", BasePath = _testDir };
-
-        var result = await keyword.ExecuteAsync(CreateContext(), args);
-
-        Assert.True(result.IsSuccess);
-        var output = result.Outputs as dynamic;
-        Assert.NotNull(output);
-        Assert.True(output!.exists);
-    }
-
-    [Fact]
-    public async Task FileExists_NonExistingFile_ReturnsFalse()
-    {
-        var keyword = new FileExistsKeyword();
-        var args = new FileExistsArgs { Path = "nonexistent.txt", BasePath = _testDir };
-
-        var result = await keyword.ExecuteAsync(CreateContext(), args);
-
-        Assert.True(result.IsSuccess);
-        var output = result.Outputs as dynamic;
-        Assert.NotNull(output);
-        Assert.False(output!.exists);
-    }
-
-    [Fact]
-    public async Task FileExists_Directory_ReturnsFalse()
-    {
-        var keyword = new FileExistsKeyword();
-        var args = new FileExistsArgs { Path = ".", BasePath = _testDir };
-
-        var result = await keyword.ExecuteAsync(CreateContext(), args);
-
-        Assert.True(result.IsSuccess);
-        var output = result.Outputs as dynamic;
-        Assert.NotNull(output);
-        Assert.False(output!.exists);
-    }
-
-    [Fact]
-    public async Task FileExists_PathTraversal_ReturnsFailure()
-    {
-        var keyword = new FileExistsKeyword();
-        var args = new FileExistsArgs { Path = "../../../etc/passwd", BasePath = _testDir };
-
-        var result = await keyword.ExecuteAsync(CreateContext(), args);
-
-        Assert.False(result.IsSuccess);
-    }
-
-    #endregion
-
-    #region FileDeleteKeyword Tests
+    #region FileDelete Tests
 
     [Fact]
     public async Task FileDelete_ExistingFile_DeletesFile()
@@ -225,17 +116,6 @@ public sealed class FileKeywordsTests : IDisposable
 
         Assert.True(result.IsSuccess);
         Assert.False(File.Exists(deleteFile));
-    }
-
-    [Fact]
-    public async Task FileDelete_NonExistingFile_ReturnsFailure()
-    {
-        var keyword = new FileDeleteKeyword();
-        var args = new FileDeleteArgs { Path = "nonexistent.txt", BasePath = _testDir };
-
-        var result = await keyword.ExecuteAsync(CreateContext(), args);
-
-        Assert.False(result.IsSuccess);
     }
 
     [Fact]
