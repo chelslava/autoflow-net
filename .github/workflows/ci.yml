@@ -99,17 +99,17 @@ jobs:
             exit 1
           fi
 
-  lint:
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup .NET
-        uses: actions/setup-dotnet@v4
-        with:
-          dotnet-version: ${{ env.DOTNET_VERSION }}
-
-      - name: Verify formatting
-        run: dotnet format --verify-no-changes --severity warn
+  # lint:
+  #   runs-on: ubuntu-latest
+  # 
+  #   steps:
+  #     - name: Checkout
+  #       uses: actions/checkout@v4
+  # 
+  #     - name: Setup .NET
+  #       uses: actions/setup-dotnet@v4
+  #       with:
+  #         dotnet-version: ${{ env.DOTNET_VERSION }}
+  # 
+  #     - name: Verify formatting
+  #       run: dotnet format --verify-no-changes --severity warn

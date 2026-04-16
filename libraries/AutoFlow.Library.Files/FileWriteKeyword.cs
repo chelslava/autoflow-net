@@ -49,11 +49,11 @@ public sealed class FileWriteKeyword : IKeywordHandler<FileWriteArgs>
 
         if (args.Append)
         {
-            File.AppendAllText(fullPath, content, encoding);
+            File.AppendAllText(fullPath!, content, encoding);
         }
         else
         {
-            File.WriteAllText(fullPath, content, encoding);
+            File.WriteAllText(fullPath!, content, encoding);
         }
 
         context.Logger.LogInformation(
