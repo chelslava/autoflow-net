@@ -62,8 +62,11 @@ public sealed class SQLiteExecutionRepository : IExecutionRepository, IDisposabl
         await _initLock.WaitAsync(cancellationToken).ConfigureAwait(false);
         try
         {
+            // Double-checked locking pattern - second check is intentional for thread safety
+#pragma warning disable CA1508 // Avoid dead conditional code
             if (_initialized)
                 return;
+#pragma warning restore CA1508
 
             await using var connection = CreateConnection();
             await connection.OpenAsync(cancellationToken).ConfigureAwait(false);

@@ -83,8 +83,6 @@ public sealed class RuntimeEngine : IRuntimeEngine
             ExecutionContext = context
         };
 
-        Exception? workflowException = null;
-
         try
         {
             await _hookRunner.OnWorkflowStartAsync(workflowContext).ConfigureAwait(false);
@@ -311,22 +309,16 @@ public sealed class RuntimeEngine : IRuntimeEngine
                         foreach (var kvp in step.SaveAs)
                         {
                             var varName = kvp.Value;
-                            object? valueToSet = null;
+                            object? valueToSet;
 
                             if (keywordResult.Outputs is System.Collections.IDictionary dict)
                             {
-                                if (dict.Contains(kvp.Key))
-                                    valueToSet = dict[kvp.Key];
-                                else
-                                    valueToSet = keywordResult.Outputs;
+                                valueToSet = dict.Contains(kvp.Key) ? dict[kvp.Key] : keywordResult.Outputs;
                             }
                             else if (keywordResult.Outputs is not null)
                             {
                                 var prop = keywordResult.Outputs.GetType().GetProperty(kvp.Key);
-                                if (prop is not null)
-                                    valueToSet = prop.GetValue(keywordResult.Outputs);
-                                else
-                                    valueToSet = keywordResult.Outputs;
+                                valueToSet = prop is not null ? prop.GetValue(keywordResult.Outputs) : keywordResult.Outputs;
                             }
                             else
                             {
@@ -462,7 +454,7 @@ public sealed class RuntimeEngine : IRuntimeEngine
         _logger.LogInformation("Выполняется параллельный блок: {Id}, max_concurrency={MaxConcurrency}",
             parallel.Id, parallel.MaxConcurrency);
 
-        var semaphore = new SemaphoreSlim(parallel.MaxConcurrency);
+        using var semaphore = new SemaphoreSlim(parallel.MaxConcurrency);
         var exceptions = new ConcurrentBag<Exception>();
         var failed = false;
 

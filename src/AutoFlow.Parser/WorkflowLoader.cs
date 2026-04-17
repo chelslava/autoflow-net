@@ -104,7 +104,7 @@ public sealed class WorkflowLoader
         if (Path.IsPathRooted(importPath))
             return importPath;
 
-        return Path.GetFullPath(Path.Combine(baseDirectory, importPath));
+        return Path.GetFullPath(Path.Join(baseDirectory, importPath));
     }
 
     private static void MergeVariables(

@@ -28,14 +28,11 @@ public sealed class CompositeSecretProvider : ISecretProvider
 
     public async Task<string?> ResolveAsync(string secretRef, CancellationToken cancellationToken = default)
     {
-        foreach (var provider in _providers)
+        foreach (var provider in _providers.Where(p => p.CanResolve(secretRef)))
         {
-            if (provider.CanResolve(secretRef))
-            {
-                var value = await provider.ResolveAsync(secretRef, cancellationToken).ConfigureAwait(false);
-                if (value is not null)
-                    return value;
-            }
+            var value = await provider.ResolveAsync(secretRef, cancellationToken).ConfigureAwait(false);
+            if (value is not null)
+                return value;
         }
 
         return null;

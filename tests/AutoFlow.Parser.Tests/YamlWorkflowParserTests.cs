@@ -30,7 +30,7 @@ public sealed class YamlWorkflowParserTests
         Assert.Equal(1, document.SchemaVersion);
         Assert.Equal("test_flow", document.Name);
         Assert.Single(document.Tasks);
-        Assert.True(document.Tasks.ContainsKey("main"));
+        Assert.NotNull(document.Tasks["main"]);
         Assert.Single(document.Tasks["main"].Steps);
     }
 
@@ -415,8 +415,8 @@ public sealed class YamlWorkflowParserTests
         Assert.Equal("complex_flow", document.Name);
         Assert.Equal(2, document.Variables.Count);
         Assert.Equal(2, document.Tasks.Count);
-        Assert.True(document.Tasks.ContainsKey("login"));
-        Assert.True(document.Tasks.ContainsKey("main"));
+        Assert.NotNull(document.Tasks["login"]);
+        Assert.NotNull(document.Tasks["main"]);
         
         var loginTask = document.Tasks["login"];
         Assert.Equal(2, loginTask.Inputs.Count);

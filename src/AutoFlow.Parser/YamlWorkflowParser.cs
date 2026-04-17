@@ -48,13 +48,11 @@ public sealed class YamlWorkflowParser : IWorkflowParser
 
         if (importsNode is YamlSequenceNode importsSequence)
         {
-            var result = new List<string>();
-            foreach (var item in importsSequence.Children)
-            {
-                if (item is YamlScalarNode scalar && !string.IsNullOrWhiteSpace(scalar.Value))
-                    result.Add(scalar.Value);
-            }
-            return result;
+            return importsSequence.Children
+                .OfType<YamlScalarNode>()
+                .Where(s => !string.IsNullOrWhiteSpace(s.Value))
+                .Select(s => s.Value)
+                .ToList();
         }
 
         return new List<string>();
@@ -219,16 +217,10 @@ public sealed class YamlWorkflowParser : IWorkflowParser
         if (stepsNode is not YamlSequenceNode stepsSequence)
             throw new ArgumentException("Секция 'steps' должна быть массивом (sequence).", nameof(taskMapping));
 
-        var result = new List<IWorkflowNode>();
-
-        foreach (var stepNode in stepsSequence.Children)
-        {
-            var workflowNode = ParseWorkflowNode(stepNode);
-            if (workflowNode is not null)
-                result.Add(workflowNode);
-        }
-
-        return result;
+        return stepsSequence.Children
+            .Select(ParseWorkflowNode)
+            .OfType<IWorkflowNode>()
+            .ToList();
     }
 
     private IWorkflowNode? ParseWorkflowNode(YamlNode node)
@@ -519,21 +511,20 @@ public sealed class YamlWorkflowParser : IWorkflowParser
 
         // Формат 2: eq: [left, right] и другие операторы
         var operators = new[] { "eq", "ne", "gt", "lt", "ge", "le", "contains", "starts_with", "ends_with", "exists" };
-        foreach (var op in operators)
+        var matchedOp = operators.FirstOrDefault(op => conditionMapping.Children.ContainsKey(op));
+        
+        if (matchedOp is not null && conditionMapping.Children.TryGetValue(matchedOp, out var operandNode))
         {
-            if (conditionMapping.Children.TryGetValue(op, out var operandNode))
-            {
-                var operands = operandNode as YamlSequenceNode;
-                if (operands is null || operands.Children.Count < 2)
-                    throw new ArgumentException($"Оператор '{op}' требует массив из 2 элементов [left, right].", nameof(node));
+            var operands = operandNode as YamlSequenceNode;
+            if (operands is null || operands.Children.Count < 2)
+                throw new ArgumentException($"Оператор '{matchedOp}' требует массив из 2 элементов [left, right].", nameof(node));
 
-                return new ConditionNode
-                {
-                    Op = op,
-                    Left = GetStringValue(operands.Children[0]),
-                    Right = ParseScalarValue(operands.Children[1])
-                };
-            }
+            return new ConditionNode
+            {
+                Op = matchedOp,
+                Left = GetStringValue(operands.Children[0]),
+                Right = ParseScalarValue(operands.Children[1])
+            };
         }
 
         throw new ArgumentException($"Condition должна содержать поле 'op' или один из операторов: {string.Join(", ", operators)}.", nameof(node));
@@ -547,16 +538,10 @@ public sealed class YamlWorkflowParser : IWorkflowParser
         if (stepsNode is not YamlSequenceNode stepsSequence)
             throw new ArgumentException($"Поле '{fieldName}' должно быть массивом (sequence).", nameof(mapping));
 
-        var result = new List<IWorkflowNode>();
-
-        foreach (var stepNode in stepsSequence.Children)
-        {
-            var workflowNode = ParseWorkflowNode(stepNode);
-            if (workflowNode is not null)
-                result.Add(workflowNode);
-        }
-
-        return result;
+        return stepsSequence.Children
+            .Select(ParseWorkflowNode)
+            .OfType<IWorkflowNode>()
+            .ToList();
     }
 
     private object? ParseScalarValue(YamlMappingNode mapping, string key)
@@ -613,15 +598,7 @@ public sealed class YamlWorkflowParser : IWorkflowParser
 
     private List<object?> ParseSequenceToArray(YamlSequenceNode sequence)
     {
-        var result = new List<object?>();
-
-        foreach (var item in sequence.Children)
-        {
-            var value = ParseScalarValue(item);
-            result.Add(value);
-        }
-
-        return result;
+        return sequence.Children.Select(ParseScalarValue).ToList();
     }
 
     private static string GetStringValue(YamlNode node)

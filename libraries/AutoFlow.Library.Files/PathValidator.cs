@@ -42,15 +42,12 @@ public static class PathValidator
             }
 
             // Check for suspicious path components
-            var normalizedPath = fullPath.Replace('\\', '/').ToUpperInvariant();
             var suspiciousPatterns = new[] { "..", "//", "~" };
+            var suspiciousPattern = suspiciousPatterns.FirstOrDefault(p => path.Contains(p));
             
-            foreach (var pattern in suspiciousPatterns)
+            if (suspiciousPattern is not null)
             {
-                if (path.Contains(pattern))
-                {
-                    return (false, null, $"Path contains suspicious pattern: '{pattern}'");
-                }
+                return (false, null, $"Path contains suspicious pattern: '{suspiciousPattern}'");
             }
 
             return (true, fullPath, null);

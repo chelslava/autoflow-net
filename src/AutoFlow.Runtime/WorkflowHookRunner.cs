@@ -104,7 +104,7 @@ public sealed class WorkflowHookRunner
             {
                 await hook.OnStepEndAsync(ctx, result).ConfigureAwait(false);
             }
-            catch (Exception ex)
+            catch (Exception ex) when (ex is not null)
             {
                 _logger.LogError(ex, "Ошибка в hook {HookType}.OnStepEndAsync", hook.GetType().Name);
             }
@@ -120,7 +120,7 @@ public sealed class WorkflowHookRunner
             {
                 await hook.OnErrorAsync(ctx, ex).ConfigureAwait(false);
             }
-            catch (Exception hookEx)
+            catch (Exception hookEx) when (hookEx is not null)
             {
                 _logger.LogError(hookEx, "Ошибка в hook {HookType}.OnErrorAsync", hook.GetType().Name);
             }

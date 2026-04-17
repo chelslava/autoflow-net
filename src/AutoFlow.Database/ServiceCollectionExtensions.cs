@@ -55,11 +55,11 @@ public static class ServiceCollectionExtensions
     public static string GetDefaultDatabasePath()
     {
         var appDataPath = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
-        var autoflowDir = System.IO.Path.Combine(appDataPath, "AutoFlow");
+        var autoflowDir = System.IO.Path.Join(appDataPath, "AutoFlow");
 
         if (!System.IO.Directory.Exists(autoflowDir))
             System.IO.Directory.CreateDirectory(autoflowDir);
 
-        return System.IO.Path.Combine(autoflowDir, "autoflow.db");
+        return System.IO.Path.Join(autoflowDir, "autoflow.db");
     }
 }

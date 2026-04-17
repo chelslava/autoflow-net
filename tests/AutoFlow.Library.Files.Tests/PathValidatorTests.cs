@@ -13,9 +13,9 @@ public sealed class PathValidatorTests : IDisposable
 
     public PathValidatorTests()
     {
-        _testBasePath = Path.Combine(Path.GetTempPath(), $"autoflow_test_{Guid.NewGuid():N}");
-        _testSubDir = Path.Combine(_testBasePath, "subdir");
-        _testFile = Path.Combine(_testBasePath, "test.txt");
+        _testBasePath = Path.Join(Path.GetTempPath(), $"autoflow_test_{Guid.NewGuid():N}");
+        _testSubDir = Path.Join(_testBasePath, "subdir");
+        _testFile = Path.Join(_testBasePath, "test.txt");
 
         Directory.CreateDirectory(_testSubDir);
         File.WriteAllText(_testFile, "test content");

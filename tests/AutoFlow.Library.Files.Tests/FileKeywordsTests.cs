@@ -18,7 +18,7 @@ public sealed class FileKeywordsTests : IDisposable
 
     public FileKeywordsTests()
     {
-        _testDir = Path.Combine(Path.GetTempPath(), $"autoflow_file_test_{Guid.NewGuid():N}");
+        _testDir = Path.Join(Path.GetTempPath(), $"autoflow_file_test_{Guid.NewGuid():N}");
         Directory.CreateDirectory(_testDir);
 
         _loggerMock = new Mock<ILogger>();
@@ -56,7 +56,7 @@ public sealed class FileKeywordsTests : IDisposable
     [Fact]
     public void PathValidator_ValidRelativePath_ReturnsValid()
     {
-        var testFile = Path.Combine(_testDir, "test.txt");
+        var testFile = Path.Join(_testDir, "test.txt");
         File.WriteAllText(testFile, "test");
 
         var result = PathValidator.ValidatePath("test.txt", _testDir);
@@ -84,7 +84,7 @@ public sealed class FileKeywordsTests : IDisposable
         var result = await keyword.ExecuteAsync(CreateContext(), args);
 
         Assert.True(result.IsSuccess);
-        var fullPath = Path.Combine(_testDir, "new.txt");
+        var fullPath = Path.Join(_testDir, "new.txt");
         Assert.True(File.Exists(fullPath));
     }
 
@@ -106,7 +106,7 @@ public sealed class FileKeywordsTests : IDisposable
     [Fact]
     public async Task FileDelete_ExistingFile_DeletesFile()
     {
-        var deleteFile = Path.Combine(_testDir, "to_delete.txt");
+        var deleteFile = Path.Join(_testDir, "to_delete.txt");
         File.WriteAllText(deleteFile, "delete me");
 
         var keyword = new FileDeleteKeyword();

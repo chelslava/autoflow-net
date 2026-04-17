@@ -97,7 +97,7 @@ public sealed class JsonParseKeyword : IKeywordHandler<JsonParseArgs>
 
             context.Logger.LogInformation(
                 "JSON parsed, path: {Path}",
-                args.Path ?? "root");
+                args.Path);
 
             return Task.FromResult(
                 KeywordResult.Success(
