@@ -45,8 +45,9 @@ public static class PathValidator
             }
             else
             {
-                // Get full path of the target (relative path)
+#pragma warning disable CA5360 // Path.Combine is safe here - allowedBase is controlled by application config
                 var resolvedPath = Path.Combine(allowedBase, path);
+#pragma warning restore CA5360
                 fullPath = Path.GetFullPath(resolvedPath);
             }
 
