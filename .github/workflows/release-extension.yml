@@ -1,0 +1,40 @@
+name: Release VS Code Extension
+
+on:
+  release:
+    types: [published]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install dependencies
+        working-directory: vscode-autoflow
+        run: npm ci
+
+      - name: Compile TypeScript
+        working-directory: vscode-autoflow
+        run: npm run compile
+
+      - name: Package extension
+        working-directory: vscode-autoflow
+        run: npx @vscode/vsce package --allow-missing-repository
+
+      - name: Upload to Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: vscode-autoflow/*.vsix
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Publish to Marketplace
+        if: ${{ secrets.VSCE_PAT != '' }}
+        working-directory: vscode-autoflow
+        run: npx @vscode/vsce publish -p ${{ secrets.VSCE_PAT }}
