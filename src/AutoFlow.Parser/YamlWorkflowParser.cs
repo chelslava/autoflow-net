@@ -51,7 +51,7 @@ public sealed class YamlWorkflowParser : IWorkflowParser
             return importsSequence.Children
                 .OfType<YamlScalarNode>()
                 .Where(s => !string.IsNullOrWhiteSpace(s.Value))
-                .Select(s => s.Value)
+                .Select(s => s.Value!)
                 .ToList();
         }
 

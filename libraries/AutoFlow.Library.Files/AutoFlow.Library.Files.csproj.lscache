@@ -64,6 +64,7 @@ obj/Debug/net10.0/
  .NETCoreApp,Version=v10.0.AssemblyAttributes.cs
  AutoFlow.Library.Files.AssemblyInfo.cs
  AutoFlow.Library.Files.GlobalUsings.g.cs
+PathValidator.cs
 
 [metadataReferences]
 ../../src/AutoFlow.Abstractions/obj/Debug/net10.0/ref/AutoFlow.Abstractions.dll

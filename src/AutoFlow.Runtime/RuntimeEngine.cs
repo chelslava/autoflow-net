@@ -95,7 +95,6 @@ public sealed class RuntimeEngine : IRuntimeEngine
         }
         catch (Exception ex)
         {
-            workflowException = ex;
             runResult.Status = ExecutionStatus.Failed;
 
             _logger.LogError(ex, "Ошибка при выполнении workflow {WorkflowName}", document.Name);
