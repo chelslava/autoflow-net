@@ -1,0 +1,343 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://autoflow-net.github.io/schemas/workflow.json",
+  "title": "AutoFlow.NET Workflow",
+  "description": "AutoFlow.NET workflow definition schema",
+  "type": "object",
+  "required": ["schema_version", "name", "tasks"],
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": {
+      "type": "integer",
+      "const": 1,
+      "description": "Workflow schema version"
+    },
+    "name": {
+      "type": "string",
+      "description": "Workflow name",
+      "minLength": 1,
+      "maxLength": 255
+    },
+    "variables": {
+      "type": "object",
+      "description": "Workflow-level variables",
+      "additionalProperties": true
+    },
+    "tasks": {
+      "type": "object",
+      "description": "Task definitions",
+      "required": ["main"],
+      "additionalProperties": {
+        "$ref": "#/definitions/task"
+      }
+    }
+  },
+  "definitions": {
+    "task": {
+      "type": "object",
+      "required": ["steps"],
+      "properties": {
+        "inputs": {
+          "type": "object",
+          "description": "Task input parameters",
+          "additionalProperties": {
+            "$ref": "#/definitions/inputDef"
+          }
+        },
+        "outputs": {
+          "type": "object",
+          "description": "Task output definitions",
+          "additionalProperties": {
+            "type": "object",
+            "properties": {
+              "description": { "type": "string" },
+              "value": { "description": "Output value expression" }
+            }
+          }
+        },
+        "steps": {
+          "type": "array",
+          "description": "Steps to execute",
+          "items": {
+            "$ref": "#/definitions/node"
+          }
+        },
+        "on_error": {
+          "$ref": "#/definitions/task",
+          "description": "Error handler task"
+        },
+        "finally": {
+          "$ref": "#/definitions/task",
+          "description": "Finally block (always executed)"
+        }
+      }
+    },
+    "inputDef": {
+      "type": "object",
+      "properties": {
+        "description": { "type": "string" },
+        "default": { "description": "Default value if not provided" },
+        "required": { "type": "boolean", "default": false }
+      }
+    },
+    "node": {
+      "oneOf": [
+        { "$ref": "#/definitions/stepNode" },
+        { "$ref": "#/definitions/ifNode" },
+        { "$ref": "#/definitions/forEachNode" },
+        { "$ref": "#/definitions/parallelNode" },
+        { "$ref": "#/definitions/callNode" },
+        { "$ref": "#/definitions/groupNode" }
+      ]
+    },
+    "stepNode": {
+      "type": "object",
+      "required": ["step"],
+      "properties": {
+        "step": {
+          "type": "object",
+          "required": ["uses"],
+          "properties": {
+            "id": {
+              "type": "string",
+              "description": "Step identifier for referencing outputs"
+            },
+            "uses": {
+              "type": "string",
+              "description": "Keyword to execute",
+              "enum": [
+                "log.info",
+                "http.request",
+                "json.parse",
+                "files.read",
+                "files.write",
+                "files.exists",
+                "files.delete",
+                "browser.open",
+                "browser.close",
+                "browser.goto",
+                "browser.click",
+                "browser.fill",
+                "browser.wait",
+                "browser.get_text",
+                "browser.assert_text",
+                "browser.assert_visible",
+                "browser.hover",
+                "browser.press",
+                "browser.evaluate",
+                "browser.screenshot"
+              ]
+            },
+            "with": {
+              "type": "object",
+              "description": "Keyword arguments"
+            },
+            "when": {
+              "$ref": "#/definitions/condition",
+              "description": "Conditional execution"
+            },
+            "timeout": {
+              "type": "string",
+              "description": "Timeout (e.g., '30s', '5m', '1000ms')",
+              "pattern": "^[0-9]+(ms|s|m)?$"
+            },
+            "retry": {
+              "$ref": "#/definitions/retry",
+              "description": "Retry configuration"
+            },
+            "continue_on_error": {
+              "type": "boolean",
+              "description": "Continue workflow on step failure",
+              "default": false
+            },
+            "save_as": {
+              "type": "object",
+              "description": "Map outputs to variables",
+              "additionalProperties": { "type": "string" }
+            }
+          }
+        }
+      }
+    },
+    "ifNode": {
+      "type": "object",
+      "required": ["if"],
+      "properties": {
+        "if": {
+          "type": "object",
+          "required": ["condition"],
+          "properties": {
+            "id": { "type": "string" },
+            "condition": { "$ref": "#/definitions/condition" },
+            "then": {
+              "type": "array",
+              "items": { "$ref": "#/definitions/node" }
+            },
+            "else": {
+              "type": "array",
+              "items": { "$ref": "#/definitions/node" }
+            }
+          }
+        }
+      }
+    },
+    "forEachNode": {
+      "type": "object",
+      "required": ["for_each"],
+      "properties": {
+        "for_each": {
+          "type": "object",
+          "required": ["items", "as", "steps"],
+          "properties": {
+            "id": { "type": "string" },
+            "items": {
+              "description": "Collection to iterate (variable reference or array)"
+            },
+            "as": {
+              "type": "string",
+              "description": "Variable name for current item"
+            },
+            "steps": {
+              "type": "array",
+              "items": { "$ref": "#/definitions/node" }
+            }
+          }
+        }
+      }
+    },
+    "parallelNode": {
+      "type": "object",
+      "required": ["parallel"],
+      "properties": {
+        "parallel": {
+          "type": "object",
+          "required": ["steps"],
+          "properties": {
+            "id": { "type": "string" },
+            "max_concurrency": {
+              "type": "integer",
+              "description": "Maximum concurrent tasks",
+              "default": 5,
+              "minimum": 1,
+              "maximum": 100
+            },
+            "error_mode": {
+              "type": "string",
+              "enum": ["fail_fast", "continue"],
+              "default": "fail_fast",
+              "description": "Error handling mode"
+            },
+            "steps": {
+              "type": "array",
+              "items": { "$ref": "#/definitions/node" }
+            }
+          }
+        }
+      }
+    },
+    "callNode": {
+      "type": "object",
+      "required": ["call"],
+      "properties": {
+        "call": {
+          "type": "object",
+          "required": ["task"],
+          "properties": {
+            "id": { "type": "string" },
+            "task": {
+              "type": "string",
+              "description": "Task name to call"
+            },
+            "inputs": {
+              "type": "object",
+              "description": "Task inputs"
+            },
+            "save_as": {
+              "type": "string",
+              "description": "Variable name for outputs"
+            }
+          }
+        }
+      }
+    },
+    "groupNode": {
+      "type": "object",
+      "required": ["group"],
+      "properties": {
+        "group": {
+          "type": "object",
+          "required": ["name", "steps"],
+          "properties": {
+            "id": { "type": "string" },
+            "name": {
+              "type": "string",
+              "description": "Group name for logging"
+            },
+            "steps": {
+              "type": "array",
+              "items": { "$ref": "#/definitions/node" }
+            }
+          }
+        }
+      }
+    },
+    "condition": {
+      "type": "object",
+      "properties": {
+        "var": { "type": "string", "description": "Variable name to check" },
+        "op": {
+          "type": "string",
+          "enum": ["eq", "ne", "gt", "ge", "lt", "le", "exists", "not_exists", "contains", "starts_with", "ends_with"],
+          "description": "Comparison operator"
+        },
+        "value": { "description": "Right-side value" },
+        "left": { "description": "Left-side value (alternative to var)" },
+        "right": { "description": "Right-side value (alternative to value)" }
+      }
+    },
+    "retry": {
+      "type": "object",
+      "properties": {
+        "attempts": {
+          "type": "integer",
+          "description": "Maximum attempts",
+          "minimum": 1,
+          "maximum": 100,
+          "default": 1
+        },
+        "type": {
+          "type": "string",
+          "enum": ["fixed", "exponential", "jitter"],
+          "default": "fixed",
+          "description": "Retry delay type"
+        },
+        "delay": {
+          "type": "string",
+          "description": "Base delay (e.g., '1s', '500ms')",
+          "pattern": "^[0-9]+(ms|s|m)?$"
+        },
+        "max_delay": {
+          "type": "string",
+          "description": "Maximum delay for exponential backoff",
+          "pattern": "^[0-9]+(ms|s|m)?$"
+        },
+        "backoff_multiplier": {
+          "type": "number",
+          "description": "Multiplier for exponential backoff",
+          "default": 2.0,
+          "minimum": 1.0
+        },
+        "retry_on": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Exception types to retry on"
+        },
+        "skip_on": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Exception types to skip retry"
+        }
+      }
+    }
+  }
+}

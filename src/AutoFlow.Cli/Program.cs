@@ -143,7 +143,12 @@ runCommand.AddOption(outputOption);
 runCommand.AddOption(outputFormatOption);
 runCommand.AddOption(runIdOption);
 
-runCommand.SetHandler(async (FileInfo file, FileInfo? output, string? format, string? runId) =>
+var dryRunOption = new Option<bool>(
+    name: "--dry-run",
+    description: "Validate and show execution plan without actually running.");
+runCommand.AddOption(dryRunOption);
+
+runCommand.SetHandler(async (FileInfo file, FileInfo? output, string? format, string? runId, bool dryRun) =>
 {
     if (!file.Exists)
     {
@@ -152,7 +157,6 @@ runCommand.SetHandler(async (FileInfo file, FileInfo? output, string? format, st
     }
 
     var loader = host.Services.GetRequiredService<WorkflowLoader>();
-    var runtime = host.Services.GetRequiredService<IRuntimeEngine>();
     var jsonReportGenerator = host.Services.GetRequiredService<JsonReportGenerator>();
     var htmlReportGenerator = host.Services.GetRequiredService<HtmlReportGenerator>();
 
@@ -179,6 +183,34 @@ runCommand.SetHandler(async (FileInfo file, FileInfo? output, string? format, st
         }
         return;
     }
+
+    if (dryRun)
+    {
+        Console.WriteLine($"🔍 Dry run: {document.Name}");
+        Console.WriteLine($"  Variables: {document.Variables.Count}");
+        foreach (var (key, value) in document.Variables)
+        {
+            var displayValue = key.Contains("secret", StringComparison.OrdinalIgnoreCase) ||
+                               key.Contains("password", StringComparison.OrdinalIgnoreCase) ||
+                               key.Contains("token", StringComparison.OrdinalIgnoreCase)
+                ? "***"
+                : value?.ToString() ?? "null";
+            Console.WriteLine($"    {key} = {displayValue}");
+        }
+
+        Console.WriteLine($"  Tasks: {document.Tasks.Count}");
+        foreach (var (taskName, task) in document.Tasks)
+        {
+            Console.WriteLine($"    {taskName}: {CountSteps(task.Steps)} steps");
+            PrintExecutionPlan(task.Steps, 2);
+        }
+
+        Console.WriteLine();
+        Console.WriteLine("✓ Dry run completed successfully. Workflow is valid and ready to execute.");
+        return;
+    }
+
+    var runtime = host.Services.GetRequiredService<IRuntimeEngine>();
 
     Console.WriteLine($"→ Выполняется: {document.Name}");
     if (!string.IsNullOrEmpty(runId))
@@ -212,7 +244,65 @@ runCommand.SetHandler(async (FileInfo file, FileInfo? output, string? format, st
         await File.WriteAllTextAsync(output.FullName, reportContent);
         Console.WriteLine($"  Отчёт ({reportFormat}): {output.FullName}");
     }
-}, fileArgument, outputOption, outputFormatOption, runIdOption);
+}, fileArgument, outputOption, outputFormatOption, runIdOption, dryRunOption);
+
+static int CountSteps(List<IWorkflowNode> nodes)
+{
+    var count = 0;
+    foreach (var node in nodes)
+    {
+        count += node switch
+        {
+            StepNode => 1,
+            IfNode ifNode => CountSteps(ifNode.Then) + CountSteps(ifNode.Else),
+            ForEachNode forEach => CountSteps(forEach.Steps),
+            ParallelNode parallel => parallel.Steps.Count,
+            CallNode => 1,
+            GroupNode group => CountSteps(group.Steps),
+            _ => 0
+        };
+    }
+    return count;
+}
+
+static void PrintExecutionPlan(List<IWorkflowNode> nodes, int indent)
+{
+    var prefix = new string(' ', indent * 2);
+    foreach (var node in nodes)
+    {
+        switch (node)
+        {
+            case StepNode step:
+                var retryInfo = step.Retry is not null ? $" (retry: {step.Retry.Attempts}x)" : "";
+                Console.WriteLine($"{prefix}- [{step.Id}] {step.Uses}{retryInfo}");
+                break;
+            case IfNode ifNode:
+                Console.WriteLine($"{prefix}? IF condition");
+                PrintExecutionPlan(ifNode.Then, indent + 1);
+                if (ifNode.Else.Count > 0)
+                {
+                    Console.WriteLine($"{prefix}? ELSE");
+                    PrintExecutionPlan(ifNode.Else, indent + 1);
+                }
+                break;
+            case ForEachNode forEach:
+                Console.WriteLine($"{prefix}* FOR_EACH as {forEach.As}");
+                PrintExecutionPlan(forEach.Steps, indent + 1);
+                break;
+            case ParallelNode parallel:
+                Console.WriteLine($"{prefix}|| PARALLEL (max: {parallel.MaxConcurrency})");
+                PrintExecutionPlan(parallel.Steps, indent + 1);
+                break;
+            case CallNode call:
+                Console.WriteLine($"{prefix}> CALL {call.Task}");
+                break;
+            case GroupNode group:
+                Console.WriteLine($"{prefix}# GROUP: {group.Name}");
+                PrintExecutionPlan(group.Steps, indent + 1);
+                break;
+        }
+    }
+}
 
 static string DetermineReportFormat(string filePath, string? explicitFormat)
 {
