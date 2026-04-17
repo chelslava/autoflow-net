@@ -32,8 +32,21 @@ public static class PathValidator
                 null => Directory.GetCurrentDirectory()
             };
 
-            // Get full path of the target
-            var fullPath = Path.GetFullPath(Path.Join(allowedBase, path));
+            // Reject absolute paths - they bypass the base directory
+            if (Path.IsPathRooted(path))
+            {
+                // Only allow if it's inside the allowed base
+                var fullPath = Path.GetFullPath(path);
+                if (!fullPath.StartsWith(allowedBase, StringComparison.OrdinalIgnoreCase))
+                {
+                    return (false, null, $"Access denied: absolute path '{path}' is outside the allowed directory.");
+                }
+                return (true, fullPath, null);
+            }
+
+            // Get full path of the target (relative path)
+            var resolvedPath = Path.Combine(allowedBase, path);
+            var fullPath = Path.GetFullPath(resolvedPath);
 
             // Ensure the resolved path is within the allowed base directory
             if (!fullPath.StartsWith(allowedBase, StringComparison.OrdinalIgnoreCase))
