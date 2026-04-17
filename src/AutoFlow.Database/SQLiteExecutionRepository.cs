@@ -338,13 +338,13 @@ public sealed class SQLiteExecutionRepository : IExecutionRepository, IDisposabl
 
         return new ExecutionStatistics
         {
-            TotalRuns = (int)(result.TotalRuns ?? 0),
-            PassedRuns = (int)(result.PassedRuns ?? 0),
-            FailedRuns = (int)(result.FailedRuns ?? 0),
-            AverageDurationMs = result.AverageDurationMs ?? 0,
-            MinDurationMs = result.MinDurationMs ?? 0,
-            MaxDurationMs = result.MaxDurationMs ?? 0,
-            TotalSteps = (int)(result.TotalSteps ?? 0),
+            TotalRuns = (int)(long)(result.TotalRuns ?? 0L),
+            PassedRuns = (int)(long)(result.PassedRuns ?? 0L),
+            FailedRuns = (int)(long)(result.FailedRuns ?? 0L),
+            AverageDurationMs = (double)(result.AverageDurationMs ?? 0D),
+            MinDurationMs = (long)(result.MinDurationMs ?? 0L),
+            MaxDurationMs = (long)(result.MaxDurationMs ?? 0L),
+            TotalSteps = (int)(long)(result.TotalSteps ?? 0L),
             From = from,
             To = to
         };

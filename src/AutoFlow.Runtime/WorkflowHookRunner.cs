@@ -40,7 +40,7 @@ public sealed class WorkflowHookRunner
             {
                 await hook.OnWorkflowStartAsync(ctx).ConfigureAwait(false);
             }
-            catch (Exception ex)
+            catch (Exception ex) when (ex is not null)
             {
                 _logger.LogError(ex, "Ошибка в hook {HookType}.OnWorkflowStartAsync", hook.GetType().Name);
             }
@@ -56,7 +56,7 @@ public sealed class WorkflowHookRunner
             {
                 await hook.OnWorkflowEndAsync(ctx, result).ConfigureAwait(false);
             }
-            catch (Exception ex)
+            catch (Exception ex) when (ex is not null)
             {
                 _logger.LogError(ex, "Ошибка в hook {HookType}.OnWorkflowEndAsync", hook.GetType().Name);
             }
@@ -72,7 +72,7 @@ public sealed class WorkflowHookRunner
             {
                 await hook.OnAfterWorkflowEndAsync(ctx, result).ConfigureAwait(false);
             }
-            catch (Exception ex)
+            catch (Exception ex) when (ex is not null)
             {
                 _logger.LogError(ex, "Ошибка в hook {HookType}.OnAfterWorkflowEndAsync", hook.GetType().Name);
             }
@@ -88,7 +88,7 @@ public sealed class WorkflowHookRunner
             {
                 await hook.OnStepStartAsync(ctx).ConfigureAwait(false);
             }
-            catch (Exception ex)
+            catch (Exception ex) when (ex is not null)
             {
                 _logger.LogError(ex, "Ошибка в hook {HookType}.OnStepStartAsync", hook.GetType().Name);
             }

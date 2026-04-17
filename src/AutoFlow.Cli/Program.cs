@@ -148,7 +148,7 @@ runCommand.SetHandler(async (FileInfo file, FileInfo? output, string? format, st
     {
         document = loader.LoadFromFile(file.FullName);
     }
-    catch (Exception ex)
+    catch (Exception ex) when (ex is not null)
     {
         Console.WriteLine($"Ошибка загрузки workflow: {ex.Message}");
         return;

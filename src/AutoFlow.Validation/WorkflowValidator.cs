@@ -154,16 +154,13 @@ public sealed class WorkflowValidator : IWorkflowValidator
                 $"Available keywords: {string.Join(", ", keywordNames.Take(5))}...");
         }
 
-        if (step.Retry is not null)
+        if (step.Retry is not null && step.Retry.Attempts < 1)
         {
-            if (step.Retry.Attempts < 1)
-            {
-                result.AddError(
-                    "AF022",
-                    $"Retry attempts must be >= 1, got {step.Retry.Attempts}",
-                    $"{location}.retry.attempts",
-                    "Use 'attempts: 1' or more");
-            }
+            result.AddError(
+                "AF022",
+                $"Retry attempts must be >= 1, got {step.Retry.Attempts}",
+                $"{location}.retry.attempts",
+                "Use 'attempts: 1' or more");
         }
     }
 

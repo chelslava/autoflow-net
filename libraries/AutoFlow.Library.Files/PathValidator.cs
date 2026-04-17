@@ -33,7 +33,7 @@ public static class PathValidator
             };
 
             // Get full path of the target
-            var fullPath = Path.GetFullPath(Path.Combine(allowedBase, path));
+            var fullPath = Path.GetFullPath(Path.Join(allowedBase, path));
 
             // Ensure the resolved path is within the allowed base directory
             if (!fullPath.StartsWith(allowedBase, StringComparison.OrdinalIgnoreCase))
