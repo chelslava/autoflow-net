@@ -6,6 +6,7 @@
   <img src="https://img.shields.io/badge/.NET-10.0-512BD4?style=for-the-badge&logo=dotnet" alt=".NET 10">
   <img src="https://img.shields.io/badge/YAML-DSL-FFB13B?style=for-the-badge&logo=yaml" alt="YAML DSL">
   <img src="https://img.shields.io/badge/Playwright-Browser-2EAD33?style=for-the-badge&logo=playwright" alt="Playwright">
+  <img src="https://img.shields.io/badge/VS_Code-Extension-007ACC?style=for-the-badge&logo=visual-studio-code" alt="VS Code Extension">
   <img src="https://img.shields.io/badge/License-MIT-green?style=for-the-badge" alt="MIT License">
 </p>
 
@@ -56,6 +57,28 @@ tasks:
 | **Lifecycle Hooks** | Перехватывай любые события — полная наблюдаемость |
 | **Браузерная автоматизация** | На базе Playwright — тестируй любое веб-приложение |
 | **SQLite хранение** | Полная история выполнений — аудит всего |
+
+---
+
+## 🧩 Расширение для VS Code
+
+Установи расширение AutoFlow.NET для лучшего опыта разработки:
+
+[![VS Code](https://img.shields.io/badge/VS%20Code-Установить-007ACC?style=for-the-badge&logo=visual-studio-code)](https://github.com/chelslava/autoflow-net/releases)
+
+**Возможности:**
+- 🎨 Подсветка синтаксиса для YAML workflows
+- 💡 IntelliSense для keywords, аргументов и переменных
+- 📖 Документация при наведении на любой keyword
+- 📝 20+ сниппетов для типичных паттернов
+- 🚀 Интеграция с CLI (run, validate, history)
+
+```bash
+# Скачай из релизов и установи
+code --install-extension autoflow-1.0.0.vsix
+```
+
+См. [vscode-autoflow/README.md](vscode-autoflow/README.md) для полной документации.
 
 ---
 

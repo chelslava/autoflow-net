@@ -6,6 +6,7 @@
   <img src="https://img.shields.io/badge/.NET-10.0-512BD4?style=for-the-badge&logo=dotnet" alt=".NET 10">
   <img src="https://img.shields.io/badge/YAML-DSL-FFB13B?style=for-the-badge&logo=yaml" alt="YAML DSL">
   <img src="https://img.shields.io/badge/Playwright-Browser-2EAD33?style=for-the-badge&logo=playwright" alt="Playwright">
+  <img src="https://img.shields.io/badge/VS_Code-Extension-007ACC?style=for-the-badge&logo=visual-studio-code" alt="VS Code Extension">
   <img src="https://img.shields.io/badge/License-MIT-green?style=for-the-badge" alt="MIT License">
 </p>
 
@@ -56,6 +57,33 @@ That's it. **3 parallel HTTP requests** with automatic error handling, logging, 
 | **Lifecycle Hooks** | Intercept any event — full observability |
 | **Browser Automation** | Playwright-powered — test any web app |
 | **SQLite Persistence** | Full execution history — audit everything |
+
+---
+
+## 🧩 VS Code Extension
+
+Install the AutoFlow.NET extension for the best development experience:
+
+[![VS Code](https://img.shields.io/badge/VS%20Code-Install-007ACC?style=for-the-badge&logo=visual-studio-code)](https://github.com/chelslava/autoflow-net/releases)
+
+**Features:**
+
+| Feature | Description |
+|---------|-------------|
+| 🎨 **Syntax Highlighting** | Keywords, variables, control flow |
+| 💡 **IntelliSense** | Keywords, arguments, outputs, variables |
+| 🔍 **Code Navigation** | Go to Definition, Find References, Workspace Symbols |
+| ✏️ **Code Editing** | Quick Fixes, Signature Help, Code Folding |
+| 🖥️ **UI** | Status Bar, Tree View, Document Links |
+| 📝 **Snippets** | 20+ workflow patterns |
+| 🚀 **CLI Integration** | Run, validate, history, stats |
+
+```bash
+# Download from releases and install
+code --install-extension autoflow-1.1.0.vsix
+```
+
+See [vscode-autoflow/README.md](vscode-autoflow/README.md) for full documentation.
 
 ---
 
