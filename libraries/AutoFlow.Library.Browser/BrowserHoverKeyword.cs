@@ -21,6 +21,13 @@ public sealed class BrowserHoverArgs
 [Keyword("browser.hover", Category = "Browser", Description = "Наводит курсор на элемент.")]
 public sealed class BrowserHoverKeyword : IKeywordHandler<BrowserHoverArgs>
 {
+    private readonly BrowserManager _browserManager;
+
+    public BrowserHoverKeyword(BrowserManager browserManager)
+    {
+        _browserManager = browserManager;
+    }
+
     public async Task<KeywordResult> ExecuteAsync(
         KeywordContext context,
         BrowserHoverArgs args,
@@ -30,7 +37,7 @@ public sealed class BrowserHoverKeyword : IKeywordHandler<BrowserHoverArgs>
             "Hovering element: {Selector} (browser: {BrowserId})",
             args.Selector, args.BrowserId);
 
-        var page = BrowserOpenKeyword.GetPage(args.BrowserId);
+        var page = _browserManager.GetPage(args.BrowserId);
 
         if (page is null)
         {

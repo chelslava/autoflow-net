@@ -22,6 +22,13 @@ public sealed class BrowserAssertTextArgs
 [Keyword("browser.assert_text", Category = "Browser", Description = "Проверяет текст на странице.")]
 public sealed class BrowserAssertTextKeyword : IKeywordHandler<BrowserAssertTextArgs>
 {
+    private readonly BrowserManager _browserManager;
+
+    public BrowserAssertTextKeyword(BrowserManager browserManager)
+    {
+        _browserManager = browserManager;
+    }
+
     public async Task<KeywordResult> ExecuteAsync(
         KeywordContext context,
         BrowserAssertTextArgs args,
@@ -31,7 +38,7 @@ public sealed class BrowserAssertTextKeyword : IKeywordHandler<BrowserAssertText
             "Asserting text: {Expected} (browser: {BrowserId})",
             args.Expected, args.BrowserId);
 
-        var page = BrowserOpenKeyword.GetPage(args.BrowserId);
+        var page = _browserManager.GetPage(args.BrowserId);
 
         if (page is null)
         {

@@ -21,6 +21,13 @@ public sealed class BrowserWaitArgs
 [Keyword("browser.wait", Category = "Browser", Description = "Ожидает появление элемента.")]
 public sealed class BrowserWaitKeyword : IKeywordHandler<BrowserWaitArgs>
 {
+    private readonly BrowserManager _browserManager;
+
+    public BrowserWaitKeyword(BrowserManager browserManager)
+    {
+        _browserManager = browserManager;
+    }
+
     public async Task<KeywordResult> ExecuteAsync(
         KeywordContext context,
         BrowserWaitArgs args,
@@ -30,7 +37,7 @@ public sealed class BrowserWaitKeyword : IKeywordHandler<BrowserWaitArgs>
             "Waiting for element: {Selector} (state: {State}, browser: {BrowserId})",
             args.Selector, args.State, args.BrowserId);
 
-        var page = BrowserOpenKeyword.GetPage(args.BrowserId);
+        var page = _browserManager.GetPage(args.BrowserId);
 
         if (page is null)
         {

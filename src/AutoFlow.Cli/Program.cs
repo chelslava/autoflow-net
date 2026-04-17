@@ -37,6 +37,9 @@ builder.Services.AddSingleton<JsonReportGenerator>();
 builder.Services.AddSingleton<HtmlReportGenerator>();
 builder.Services.AddHttpClient<HttpRequestKeyword>();
 
+// Browser manager - centralized lifecycle management
+builder.Services.AddSingleton<BrowserManager>();
+
 // Secret management
 builder.Services.AddSingleton<SecretMasker>();
 builder.Services.AddSingleton<ISecretProvider, EnvSecretProvider>();
@@ -71,6 +74,10 @@ builder.Services.AddKeywordsFromAssembly(
         registry.Register(name, handlerType, argsType, category, description));
 
 using var host = builder.Build();
+
+// Initialize BrowserManagerProvider for backward compatibility
+var browserManager = host.Services.GetRequiredService<BrowserManager>();
+BrowserManagerProvider.Initialize(browserManager);
 
 var fileArgument = new Argument<FileInfo>(
     name: "file",

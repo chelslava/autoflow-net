@@ -22,6 +22,13 @@ public sealed class BrowserClickArgs
 [Keyword("browser.click", Category = "Browser", Description = "Кликает по элементу.")]
 public sealed class BrowserClickKeyword : IKeywordHandler<BrowserClickArgs>
 {
+    private readonly BrowserManager _browserManager;
+
+    public BrowserClickKeyword(BrowserManager browserManager)
+    {
+        _browserManager = browserManager;
+    }
+
     public async Task<KeywordResult> ExecuteAsync(
         KeywordContext context,
         BrowserClickArgs args,
@@ -31,7 +38,7 @@ public sealed class BrowserClickKeyword : IKeywordHandler<BrowserClickArgs>
             "Clicking element: {Selector} (browser: {BrowserId})",
             args.Selector, args.BrowserId);
 
-        var page = BrowserOpenKeyword.GetPage(args.BrowserId);
+        var page = _browserManager.GetPage(args.BrowserId);
 
         if (page is null)
         {

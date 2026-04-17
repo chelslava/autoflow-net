@@ -21,6 +21,13 @@ public sealed class BrowserPressArgs
 [Keyword("browser.press", Category = "Browser", Description = "Нажимает клавиши.")]
 public sealed class BrowserPressKeyword : IKeywordHandler<BrowserPressArgs>
 {
+    private readonly BrowserManager _browserManager;
+
+    public BrowserPressKeyword(BrowserManager browserManager)
+    {
+        _browserManager = browserManager;
+    }
+
     public async Task<KeywordResult> ExecuteAsync(
         KeywordContext context,
         BrowserPressArgs args,
@@ -30,7 +37,7 @@ public sealed class BrowserPressKeyword : IKeywordHandler<BrowserPressArgs>
             "Pressing key: {Key} (browser: {BrowserId})",
             args.Key, args.BrowserId);
 
-        var page = BrowserOpenKeyword.GetPage(args.BrowserId);
+        var page = _browserManager.GetPage(args.BrowserId);
 
         if (page is null)
         {

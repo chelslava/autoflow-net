@@ -17,6 +17,13 @@ public sealed class BrowserCloseArgs
 [Keyword("browser.close", Category = "Browser", Description = "Закрывает браузер.")]
 public sealed class BrowserCloseKeyword : IKeywordHandler<BrowserCloseArgs>
 {
+    private readonly BrowserManager _browserManager;
+
+    public BrowserCloseKeyword(BrowserManager browserManager)
+    {
+        _browserManager = browserManager;
+    }
+
     public async Task<KeywordResult> ExecuteAsync(
         KeywordContext context,
         BrowserCloseArgs args,
@@ -26,19 +33,7 @@ public sealed class BrowserCloseKeyword : IKeywordHandler<BrowserCloseArgs>
             "Closing browser: {BrowserId}",
             args.BrowserId);
 
-        var page = BrowserOpenKeyword.GetPage(args.BrowserId);
-        var browser = BrowserOpenKeyword.GetBrowser(args.BrowserId);
-
-        if (page is not null)
-        {
-            await page.CloseAsync().ConfigureAwait(false);
-        }
-
-        if (browser is not null)
-        {
-            await browser.CloseAsync().ConfigureAwait(false);
-            BrowserOpenKeyword.RemoveBrowser(args.BrowserId);
-        }
+        await _browserManager.CloseBrowserAsync(args.BrowserId).ConfigureAwait(false);
 
         context.Logger.LogInformation(
             "Browser closed: {BrowserId}",

@@ -20,6 +20,13 @@ public sealed class BrowserGetTextArgs
 [Keyword("browser.get_text", Category = "Browser", Description = "Получает текст элемента.")]
 public sealed class BrowserGetTextKeyword : IKeywordHandler<BrowserGetTextArgs>
 {
+    private readonly BrowserManager _browserManager;
+
+    public BrowserGetTextKeyword(BrowserManager browserManager)
+    {
+        _browserManager = browserManager;
+    }
+
     public async Task<KeywordResult> ExecuteAsync(
         KeywordContext context,
         BrowserGetTextArgs args,
@@ -29,7 +36,7 @@ public sealed class BrowserGetTextKeyword : IKeywordHandler<BrowserGetTextArgs>
             "Getting text from element: {Selector} (browser: {BrowserId})",
             args.Selector, args.BrowserId);
 
-        var page = BrowserOpenKeyword.GetPage(args.BrowserId);
+        var page = _browserManager.GetPage(args.BrowserId);
 
         if (page is null)
         {

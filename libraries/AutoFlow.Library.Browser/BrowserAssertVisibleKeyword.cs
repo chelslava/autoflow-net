@@ -19,6 +19,13 @@ public sealed class BrowserAssertVisibleArgs
 [Keyword("browser.assert_visible", Category = "Browser", Description = "Проверяет видимость элемента.")]
 public sealed class BrowserAssertVisibleKeyword : IKeywordHandler<BrowserAssertVisibleArgs>
 {
+    private readonly BrowserManager _browserManager;
+
+    public BrowserAssertVisibleKeyword(BrowserManager browserManager)
+    {
+        _browserManager = browserManager;
+    }
+
     public async Task<KeywordResult> ExecuteAsync(
         KeywordContext context,
         BrowserAssertVisibleArgs args,
@@ -28,7 +35,7 @@ public sealed class BrowserAssertVisibleKeyword : IKeywordHandler<BrowserAssertV
             "Asserting visibility: {Selector} (browser: {BrowserId})",
             args.Selector, args.BrowserId);
 
-        var page = BrowserOpenKeyword.GetPage(args.BrowserId);
+        var page = _browserManager.GetPage(args.BrowserId);
 
         if (page is null)
         {

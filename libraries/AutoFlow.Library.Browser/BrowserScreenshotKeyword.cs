@@ -22,6 +22,13 @@ public sealed class BrowserScreenshotArgs
 [Keyword("browser.screenshot", Category = "Browser", Description = "Делает скриншот страницы.")]
 public sealed class BrowserScreenshotKeyword : IKeywordHandler<BrowserScreenshotArgs>
 {
+    private readonly BrowserManager _browserManager;
+
+    public BrowserScreenshotKeyword(BrowserManager browserManager)
+    {
+        _browserManager = browserManager;
+    }
+
     public async Task<KeywordResult> ExecuteAsync(
         KeywordContext context,
         BrowserScreenshotArgs args,
@@ -31,7 +38,7 @@ public sealed class BrowserScreenshotKeyword : IKeywordHandler<BrowserScreenshot
             "Taking screenshot: {Path} (browser: {BrowserId})",
             args.Path, args.BrowserId);
 
-        var page = BrowserOpenKeyword.GetPage(args.BrowserId);
+        var page = _browserManager.GetPage(args.BrowserId);
 
         if (page is null)
         {

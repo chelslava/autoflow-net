@@ -23,6 +23,13 @@ public sealed class BrowserFillArgs
 [Keyword("browser.fill", Category = "Browser", Description = "Заполняет поле ввода.")]
 public sealed class BrowserFillKeyword : IKeywordHandler<BrowserFillArgs>
 {
+    private readonly BrowserManager _browserManager;
+
+    public BrowserFillKeyword(BrowserManager browserManager)
+    {
+        _browserManager = browserManager;
+    }
+
     public async Task<KeywordResult> ExecuteAsync(
         KeywordContext context,
         BrowserFillArgs args,
@@ -32,7 +39,7 @@ public sealed class BrowserFillKeyword : IKeywordHandler<BrowserFillArgs>
             "Filling element: {Selector} (browser: {BrowserId})",
             args.Selector, args.BrowserId);
 
-        var page = BrowserOpenKeyword.GetPage(args.BrowserId);
+        var page = _browserManager.GetPage(args.BrowserId);
 
         if (page is null)
         {

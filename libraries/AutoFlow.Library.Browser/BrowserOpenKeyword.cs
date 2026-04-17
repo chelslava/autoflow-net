@@ -2,7 +2,7 @@
 // BrowserOpenKeyword.cs — открывает браузер и создаёт новую страницу.
 // =============================================================================
 
-using System.Collections.Generic;
+using System;
 using System.Threading;
 using System.Threading.Tasks;
 using AutoFlow.Abstractions;
@@ -23,9 +23,12 @@ public sealed class BrowserOpenArgs
 [Keyword("browser.open", Category = "Browser", Description = "Открывает браузер и создаёт новую страницу.")]
 public sealed class BrowserOpenKeyword : IKeywordHandler<BrowserOpenArgs>
 {
-    private static readonly Dictionary<string, IBrowser> _browsers = new();
-    private static readonly Dictionary<string, IPage> _pages = new();
-    private static readonly object _lock = new();
+    private readonly BrowserManager _browserManager;
+
+    public BrowserOpenKeyword(BrowserManager browserManager)
+    {
+        _browserManager = browserManager ?? throw new ArgumentNullException(nameof(browserManager));
+    }
 
     public async Task<KeywordResult> ExecuteAsync(
         KeywordContext context,
@@ -36,80 +39,34 @@ public sealed class BrowserOpenKeyword : IKeywordHandler<BrowserOpenArgs>
             "Opening {Browser} browser (headless: {Headless})",
             args.Browser, args.Headless);
 
-        var playwright = await Playwright.CreateAsync().ConfigureAwait(false);
-        
-        IBrowser browser = args.Browser.ToLowerInvariant() switch
-        {
-            "firefox" => await playwright.Firefox.LaunchAsync(new BrowserTypeLaunchOptions
-            {
-                Headless = args.Headless,
-                SlowMo = args.SlowMo ? 100 : null
-            }).ConfigureAwait(false),
-            "webkit" => await playwright.Webkit.LaunchAsync(new BrowserTypeLaunchOptions
-            {
-                Headless = args.Headless,
-                SlowMo = args.SlowMo ? 100 : null
-            }).ConfigureAwait(false),
-            _ => await playwright.Chromium.LaunchAsync(new BrowserTypeLaunchOptions
-            {
-                Headless = args.Headless,
-                SlowMo = args.SlowMo ? 100 : null
-            }).ConfigureAwait(false)
-        };
-
-        var viewport = args.Width.HasValue && args.Height.HasValue
-            ? new ViewportSize { Width = args.Width.Value, Height = args.Height.Value }
-            : null;
-
-        var page = await browser.NewPageAsync(new BrowserNewPageOptions
-        {
-            ViewportSize = viewport
-        }).ConfigureAwait(false);
-
-        var browserId = System.Guid.NewGuid().ToString("N")[..8];
-
-        lock (_lock)
-        {
-            _browsers[browserId] = browser;
-            _pages[browserId] = page;
-        }
+        var instance = await _browserManager.CreateBrowserAsync(
+            args.Browser,
+            args.Headless,
+            args.Width,
+            args.Height,
+            args.SlowMo,
+            cancellationToken).ConfigureAwait(false);
 
         context.Logger.LogInformation(
             "Browser opened with ID: {BrowserId}",
-            browserId);
+            instance.Id);
 
         return KeywordResult.Success(new
         {
-            browserId,
-            browser = args.Browser,
-            headless = args.Headless,
-            width = args.Width ?? 1280,
-            height = args.Height ?? 720
+            browserId = instance.Id,
+            browser = instance.BrowserType,
+            headless = instance.Headless,
+            width = instance.Width ?? 1280,
+            height = instance.Height ?? 720
         });
     }
 
-    public static IPage? GetPage(string browserId)
-    {
-        lock (_lock)
-        {
-            return _pages.TryGetValue(browserId, out var page) ? page : null;
-        }
-    }
+    public static IPage? GetPage(string browserId) =>
+        BrowserManagerProvider.Manager?.GetPage(browserId);
 
-    public static IBrowser? GetBrowser(string browserId)
-    {
-        lock (_lock)
-        {
-            return _browsers.TryGetValue(browserId, out var browser) ? browser : null;
-        }
-    }
+    public static IBrowser? GetBrowser(string browserId) =>
+        BrowserManagerProvider.Manager?.GetBrowser(browserId);
 
-    public static void RemoveBrowser(string browserId)
-    {
-        lock (_lock)
-        {
-            _browsers.Remove(browserId);
-            _pages.Remove(browserId);
-        }
-    }
+    public static async Task CloseBrowserAsync(string browserId) =>
+        await (BrowserManagerProvider.Manager?.CloseBrowserAsync(browserId) ?? Task.CompletedTask).ConfigureAwait(false);
 }

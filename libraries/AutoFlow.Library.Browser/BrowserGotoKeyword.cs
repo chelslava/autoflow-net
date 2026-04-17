@@ -21,6 +21,13 @@ public sealed class BrowserGotoArgs
 [Keyword("browser.goto", Category = "Browser", Description = "Навигирует на указанный URL.")]
 public sealed class BrowserGotoKeyword : IKeywordHandler<BrowserGotoArgs>
 {
+    private readonly BrowserManager _browserManager;
+
+    public BrowserGotoKeyword(BrowserManager browserManager)
+    {
+        _browserManager = browserManager;
+    }
+
     public async Task<KeywordResult> ExecuteAsync(
         KeywordContext context,
         BrowserGotoArgs args,
@@ -30,7 +37,7 @@ public sealed class BrowserGotoKeyword : IKeywordHandler<BrowserGotoArgs>
             "Navigating to: {Url} (browser: {BrowserId})",
             args.Url, args.BrowserId);
 
-        var page = BrowserOpenKeyword.GetPage(args.BrowserId);
+        var page = _browserManager.GetPage(args.BrowserId);
 
         if (page is null)
         {

@@ -20,6 +20,13 @@ public sealed class BrowserEvaluateArgs
 [Keyword("browser.evaluate", Category = "Browser", Description = "Выполняет JavaScript в браузере.")]
 public sealed class BrowserEvaluateKeyword : IKeywordHandler<BrowserEvaluateArgs>
 {
+    private readonly BrowserManager _browserManager;
+
+    public BrowserEvaluateKeyword(BrowserManager browserManager)
+    {
+        _browserManager = browserManager;
+    }
+
     public async Task<KeywordResult> ExecuteAsync(
         KeywordContext context,
         BrowserEvaluateArgs args,
@@ -29,7 +36,7 @@ public sealed class BrowserEvaluateKeyword : IKeywordHandler<BrowserEvaluateArgs
             "Evaluating script (browser: {BrowserId})",
             args.BrowserId);
 
-        var page = BrowserOpenKeyword.GetPage(args.BrowserId);
+        var page = _browserManager.GetPage(args.BrowserId);
 
         if (page is null)
         {
