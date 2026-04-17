@@ -1,0 +1,128 @@
+{
+  "$schema": "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
+  "name": "AutoFlow",
+  "scopeName": "source.autoflow",
+  "patterns": [
+    { "include": "#comments" },
+    { "include": "#keywords" },
+    { "include": "#variables" },
+    { "include": "#strings" },
+    { "include": "#numbers" },
+    { "include": "#booleans" },
+    { "include": "#yaml-keys" }
+  ],
+  "repository": {
+    "comments": {
+      "name": "comment.line.number-sign.yaml",
+      "match": "#.*$"
+    },
+    "keywords": {
+      "patterns": [
+        {
+          "name": "support.function.autoflow.http",
+          "match": "\\b(http\\.request|json\\.parse)\\b"
+        },
+        {
+          "name": "support.function.autoflow.files",
+          "match": "\\b(files\\.read|files\\.write|files\\.exists|files\\.delete)\\b"
+        },
+        {
+          "name": "support.function.autoflow.browser",
+          "match": "\\b(browser\\.open|browser\\.close|browser\\.goto|browser\\.click|browser\\.fill|browser\\.wait|browser\\.screenshot|browser\\.assert_text|browser\\.assert_visible|browser\\.get_text|browser\\.hover|browser\\.press|browser\\.evaluate)\\b"
+        },
+        {
+          "name": "support.function.autoflow.logging",
+          "match": "\\b(log\\.info)\\b"
+        },
+        {
+          "name": "keyword.control.autoflow",
+          "match": "\\b(if|else|for_each|parallel|call|group|step|uses|with|save_as|on_error|finally|retry)\\b"
+        },
+        {
+          "name": "keyword.other.autoflow",
+          "match": "\\b(schema_version|name|tasks|variables|steps|max_concurrency|attempts|type|delay|max_delay)\\b"
+        }
+      ]
+    },
+    "variables": {
+      "patterns": [
+        {
+          "name": "variable.other.autoflow.env",
+          "match": "\\$\\{env:([^}]+)\\}",
+          "captures": {
+            "1": { "name": "variable.parameter.autoflow" }
+          }
+        },
+        {
+          "name": "variable.other.autoflow.secret",
+          "match": "\\$\\{secret:([^}]+)\\}",
+          "captures": {
+            "1": { "name": "constant.other.autoflow.secret-name" }
+          }
+        },
+        {
+          "name": "variable.other.autoflow.steps",
+          "match": "\\$\\{steps\\.([^.}]+)\\.outputs\\.([^}]+)\\}",
+          "captures": {
+            "1": { "name": "entity.name.tag.autoflow.step-id" },
+            "2": { "name": "variable.other.autoflow.output" }
+          }
+        },
+        {
+          "name": "variable.other.autoflow.simple",
+          "match": "\\$\\{([a-zA-Z_][a-zA-Z0-9_]*)\\}",
+          "captures": {
+            "1": { "name": "variable.other.autoflow.var-name" }
+          }
+        }
+      ]
+    },
+    "strings": {
+      "patterns": [
+        {
+          "name": "string.quoted.double.autoflow",
+          "begin": "\"",
+          "end": "\"",
+          "patterns": [
+            { "include": "#variables" },
+            {
+              "name": "constant.character.escape.autoflow",
+              "match": "\\\\."
+            }
+          ]
+        },
+        {
+          "name": "string.quoted.single.autoflow",
+          "begin": "'",
+          "end": "'",
+          "patterns": [
+            { "include": "#variables" }
+          ]
+        }
+      ]
+    },
+    "numbers": {
+      "name": "constant.numeric.autoflow",
+      "match": "\\b\\d+(\\.\\d+)?\\b"
+    },
+    "booleans": {
+      "name": "constant.language.autoflow",
+      "match": "\\b(true|false|null)\\b"
+    },
+    "yaml-keys": {
+      "patterns": [
+        {
+          "name": "entity.name.tag.autoflow.step-id",
+          "match": "^\\s+-?\\s*id:\\s*([a-zA-Z_][a-zA-Z0-9_]*)",
+          "captures": {
+            "1": { "name": "entity.name.tag.autoflow.id-value" }
+          }
+        },
+        {
+          "name": "entity.name.tag.yaml",
+          "match": "^\\s*(-\\s*)?([a-zA-Z_][a-zA-Z0-9_]*)(?=\\s*:)"
+        }
+      ]
+    }
+  }
+}

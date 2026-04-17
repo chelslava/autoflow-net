@@ -1,0 +1,323 @@
+{
+  "Workflow Basic": {
+    "prefix": "af-workflow",
+    "body": [
+      "schema_version: 1",
+      "name: ${1:workflow_name}",
+      "",
+      "variables:",
+      "  ${2:var_name}: ${3:value}",
+      "",
+      "tasks:",
+      "  main:",
+      "    steps:",
+      "      - $0"
+    ],
+    "description": "Basic AutoFlow workflow template"
+  },
+  "HTTP Request": {
+    "prefix": "af-http",
+    "body": [
+      "- step:",
+      "    id: ${1:request_id}",
+      "    uses: http.request",
+      "    with:",
+      "      url: \"${2:https://api.example.com/endpoint}\"",
+      "      method: ${3:GET}",
+      "      headers:",
+      "        Content-Type: application/json",
+      "    save_as:",
+      "      body: ${4:response_data}"
+    ],
+    "description": "HTTP request step"
+  },
+  "HTTP POST": {
+    "prefix": "af-http-post",
+    "body": [
+      "- step:",
+      "    id: ${1:post_id}",
+      "    uses: http.request",
+      "    with:",
+      "      url: \"${2:https://api.example.com/endpoint}\"",
+      "      method: POST",
+      "      headers:",
+      "        Content-Type: application/json",
+      "      body:",
+      "        ${3:key}: ${4:value}",
+      "    save_as:",
+      "      body: ${5:response_data}"
+    ],
+    "description": "HTTP POST request with body"
+  },
+  "Browser Open": {
+    "prefix": "af-browser-open",
+    "body": [
+      "- step:",
+      "    id: ${1:open_browser}",
+      "    uses: browser.open",
+      "    with:",
+      "      browser: ${2:chromium}",
+      "      headless: ${3:true}",
+      "    save_as:",
+      "      browserId: ${4:browser_id}"
+    ],
+    "description": "Open browser step"
+  },
+  "Browser Navigate": {
+    "prefix": "af-browser-goto",
+    "body": [
+      "- step:",
+      "    id: ${1:navigate}",
+      "    uses: browser.goto",
+      "    with:",
+      "      browserId: \"\\${${2:browser_id}}\"",
+      "      url: \"${3:https://example.com}\""
+    ],
+    "description": "Navigate browser to URL"
+  },
+  "Browser Click": {
+    "prefix": "af-browser-click",
+    "body": [
+      "- step:",
+      "    id: ${1:click}",
+      "    uses: browser.click",
+      "    with:",
+      "      browserId: \"\\${${2:browser_id}}\"",
+      "      selector: \"${3:button[type=submit]}\""
+    ],
+    "description": "Click element in browser"
+  },
+  "Browser Fill": {
+    "prefix": "af-browser-fill",
+    "body": [
+      "- step:",
+      "    id: ${1:fill}",
+      "    uses: browser.fill",
+      "    with:",
+      "      browserId: \"\\${${2:browser_id}}\"",
+      "      selector: \"${3:#email}\"",
+      "      value: \"${4:test@example.com}\""
+    ],
+    "description": "Fill form field in browser"
+  },
+  "Browser Wait": {
+    "prefix": "af-browser-wait",
+    "body": [
+      "- step:",
+      "    id: ${1:wait}",
+      "    uses: browser.wait",
+      "    with:",
+      "      browserId: \"\\${${2:browser_id}}\"",
+      "      selector: \"${3:.loading}\"",
+      "      state: ${4:hidden}"
+    ],
+    "description": "Wait for element state"
+  },
+  "Browser Screenshot": {
+    "prefix": "af-browser-screenshot",
+    "body": [
+      "- step:",
+      "    id: ${1:screenshot}",
+      "    uses: browser.screenshot",
+      "    with:",
+      "      browserId: \"\\${${2:browser_id}}\"",
+      "      path: \"${3:screenshots/shot.png}\"",
+      "      fullPage: ${4:false}"
+    ],
+    "description": "Take browser screenshot"
+  },
+  "Browser Close": {
+    "prefix": "af-browser-close",
+    "body": [
+      "- step:",
+      "    id: ${1:close}",
+      "    uses: browser.close",
+      "    with:",
+      "      browserId: \"\\${${2:browser_id}}\""
+    ],
+    "description": "Close browser"
+  },
+  "File Read": {
+    "prefix": "af-file-read",
+    "body": [
+      "- step:",
+      "    id: ${1:read_file}",
+      "    uses: files.read",
+      "    with:",
+      "      path: \"${2:./data/input.txt}\"",
+      "    save_as:",
+      "      content: ${3:file_content}"
+    ],
+    "description": "Read file step"
+  },
+  "File Write": {
+    "prefix": "af-file-write",
+    "body": [
+      "- step:",
+      "    id: ${1:write_file}",
+      "    uses: files.write",
+      "    with:",
+      "      path: \"${2:./data/output.txt}\"",
+      "      content: \"${3:Hello, World!}\""
+    ],
+    "description": "Write file step"
+  },
+  "Log Info": {
+    "prefix": "af-log",
+    "body": [
+      "- step:",
+      "    id: ${1:log}",
+      "    uses: log.info",
+      "    with:",
+      "      message: \"${2:Operation completed}\""
+    ],
+    "description": "Log info step"
+  },
+  "Parallel Execution": {
+    "prefix": "af-parallel",
+    "body": [
+      "- parallel:",
+      "    id: ${1:parallel_tasks}",
+      "    max_concurrency: ${2:3}",
+      "    steps:",
+      "      - $0"
+    ],
+    "description": "Parallel execution block"
+  },
+  "For Each Loop": {
+    "prefix": "af-foreach",
+    "body": [
+      "- for_each:",
+      "    id: ${1:loop}",
+      "    items: \"\\${${2:items}}\"",
+      "    as: ${3:item}",
+      "    steps:",
+      "      - $0"
+    ],
+    "description": "For each loop"
+  },
+  "Condition If": {
+    "prefix": "af-if",
+    "body": [
+      "- if:",
+      "    condition: \"\\${${1:variable}} == ${2:value}\"",
+      "    then:",
+      "      - $0",
+      "    else:",
+      "      - "
+    ],
+    "description": "Conditional execution"
+  },
+  "Retry Step": {
+    "prefix": "af-retry",
+    "body": [
+      "- step:",
+      "    id: ${1:retry_step}",
+      "    uses: ${2:http.request}",
+      "    with:",
+      "      ${3:url}: \"${4:https://api.example.com}\"",
+      "    retry:",
+      "      attempts: ${5:3}",
+      "      type: ${6:exponential}",
+      "      delay: \"${7:1s}\"",
+      "      max_delay: \"${8:30s}\""
+    ],
+    "description": "Step with retry configuration"
+  },
+  "On Error Handler": {
+    "prefix": "af-onerror",
+    "body": [
+      "on_error:",
+      "  - step:",
+      "      id: ${1:error_handler}",
+      "      uses: log.info",
+      "      with:",
+      "        message: \"Error occurred: \\${${2:error_message}}\""
+    ],
+    "description": "Error handler block"
+  },
+  "Finally Block": {
+    "prefix": "af-finally",
+    "body": [
+      "finally:",
+      "  - step:",
+      "      id: ${1:cleanup}",
+      "      uses: log.info",
+      "      with:",
+      "        message: \"${2:Cleanup completed}\""
+    ],
+    "description": "Finally block"
+  },
+  "JSON Parse": {
+    "prefix": "af-json-parse",
+    "body": [
+      "- step:",
+      "    id: ${1:parse_json}",
+      "    uses: json.parse",
+      "    with:",
+      "      json: \"\\${${2:response_body}}\"",
+      "      path: \"${3:data.items}\"",
+      "    save_as:",
+      "      value: ${4:parsed_data}"
+    ],
+    "description": "Parse JSON step"
+  },
+  "Browser Login Flow": {
+    "prefix": "af-browser-login",
+    "body": [
+      "- step:",
+      "    id: open_browser",
+      "    uses: browser.open",
+      "    with:",
+      "      browser: chromium",
+      "      headless: false",
+      "    save_as:",
+      "      browserId: browser_id",
+      "",
+      "- step:",
+      "    id: navigate",
+      "    uses: browser.goto",
+      "    with:",
+      "      browserId: \"\\${browser_id}\"",
+      "      url: \"${1:https://app.example.com/login}\"",
+      "",
+      "- step:",
+      "    id: fill_email",
+      "    uses: browser.fill",
+      "    with:",
+      "      browserId: \"\\${browser_id}\"",
+      "      selector: \"${2:#email}\"",
+      "      value: \"\\${secret:${3:USER_EMAIL}}\"",
+      "",
+      "- step:",
+      "    id: fill_password",
+      "    uses: browser.fill",
+      "    with:",
+      "      browserId: \"\\${browser_id}\"",
+      "      selector: \"${4:#password}\"",
+      "      value: \"\\${secret:${5:USER_PASSWORD}}\"",
+      "",
+      "- step:",
+      "    id: submit",
+      "    uses: browser.click",
+      "    with:",
+      "      browserId: \"\\${browser_id}\"",
+      "      selector: \"button[type=submit]\"",
+      "",
+      "- step:",
+      "    id: verify_login",
+      "    uses: browser.assert_text",
+      "    with:",
+      "      browserId: \"\\${browser_id}\"",
+      "      selector: \"${6:.welcome}\"",
+      "      expected: \"${7:Welcome}\"",
+      "",
+      "- step:",
+      "    id: close_browser",
+      "    uses: browser.close",
+      "    with:",
+      "      browserId: \"\\${browser_id}\""
+    ],
+    "description": "Complete browser login flow"
+  }
+}
