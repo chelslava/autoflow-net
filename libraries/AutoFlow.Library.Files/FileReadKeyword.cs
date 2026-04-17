@@ -11,11 +11,14 @@ public sealed class FileReadArgs
     public string Path { get; set; } = string.Empty;
     public string? Encoding { get; set; }
     public string? BasePath { get; set; }
+    public long? MaxSizeBytes { get; set; }
 }
 
 [Keyword("files.read", Category = "Files", Description = "Reads file contents into a string.")]
 public sealed class FileReadKeyword : IKeywordHandler<FileReadArgs>
 {
+    private const long DefaultMaxFileSize = 10 * 1024 * 1024; // 10 MB
+
     public Task<KeywordResult> ExecuteAsync(
         KeywordContext context,
         FileReadArgs args,
@@ -36,6 +39,15 @@ public sealed class FileReadKeyword : IKeywordHandler<FileReadArgs>
                 KeywordResult.Failure($"File not found: {args.Path}"));
         }
 
+        var maxSize = args.MaxSizeBytes ?? DefaultMaxFileSize;
+        var fileInfo = new FileInfo(fullPath);
+        
+        if (fileInfo.Length > maxSize)
+        {
+            return Task.FromResult(
+                KeywordResult.Failure($"File size ({fileInfo.Length:N0} bytes) exceeds maximum allowed ({maxSize:N0} bytes)"));
+        }
+
         var encoding = args.Encoding?.ToLowerInvariant() switch
         {
             "utf8" or "utf-8" => System.Text.Encoding.UTF8,
@@ -51,7 +63,7 @@ public sealed class FileReadKeyword : IKeywordHandler<FileReadArgs>
 
         return Task.FromResult(
             KeywordResult.Success(
-                new { content, path = args.Path },
+                new { content, path = args.Path, sizeBytes = fileInfo.Length },
                 [$"Read {content.Length} chars from {args.Path}"]));
     }
 }

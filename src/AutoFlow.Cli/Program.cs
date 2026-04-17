@@ -35,7 +35,13 @@ builder.Services.AddSingleton<IWorkflowParser, YamlWorkflowParser>();
 builder.Services.AddSingleton<WorkflowLoader>();
 builder.Services.AddSingleton<JsonReportGenerator>();
 builder.Services.AddSingleton<HtmlReportGenerator>();
-builder.Services.AddHttpClient<HttpRequestKeyword>();
+builder.Services.AddHttpClient<HttpRequestKeyword>()
+    .ConfigurePrimaryHttpMessageHandler(() => new SocketsHttpHandler
+    {
+        PooledConnectionLifetime = TimeSpan.FromMinutes(5),
+        PooledConnectionIdleTimeout = TimeSpan.FromMinutes(2),
+        MaxConnectionsPerServer = 100
+    });
 
 // Browser manager - centralized lifecycle management
 builder.Services.AddSingleton<BrowserManager>();

@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Net;
 using System.Net.Http;
 using System.Text;
@@ -19,12 +20,14 @@ public sealed class HttpRequestArgs
     public object? Body { get; set; }
     public int? TimeoutMs { get; set; }
     public bool AllowPrivateNetworks { get; set; }
+    public long? MaxResponseSizeBytes { get; set; }
 }
 
 [Keyword("http.request", Category = "HTTP", Description = "Executes an HTTP request.")]
 public sealed class HttpRequestKeyword : IKeywordHandler<HttpRequestArgs>
 {
     private static readonly string[] AllowedSchemes = { "http", "https" };
+    private const long DefaultMaxResponseSize = 50 * 1024 * 1024; // 50 MB
     
     private readonly HttpClient _httpClient;
 
@@ -82,7 +85,21 @@ public sealed class HttpRequestKeyword : IKeywordHandler<HttpRequestArgs>
 
         var response = await _httpClient.SendAsync(request, effectiveToken).ConfigureAwait(false);
 
-        var responseBody = await response.Content.ReadAsStringAsync(effectiveToken).ConfigureAwait(false);
+        var maxResponseSize = args.MaxResponseSizeBytes ?? DefaultMaxResponseSize;
+        string responseBody;
+        
+        var contentLength = response.Content.Headers.ContentLength;
+        if (contentLength.HasValue && contentLength.Value > maxResponseSize)
+        {
+            responseBody = $"[Response too large: {contentLength.Value:N0} bytes > {maxResponseSize:N0} byte limit]";
+        }
+        else
+        {
+            using var stream = await response.Content.ReadAsStreamAsync(effectiveToken).ConfigureAwait(false);
+            using var limitedStream = new LimitedStream(stream, maxResponseSize);
+            using var reader = new StreamReader(limitedStream, Encoding.UTF8);
+            responseBody = await reader.ReadToEndAsync(effectiveToken).ConfigureAwait(false);
+        }
 
         var result = new
         {
@@ -170,4 +187,54 @@ public sealed class HttpRequestKeyword : IKeywordHandler<HttpRequestArgs>
 
         return false;
     }
+}
+
+internal sealed class LimitedStream : Stream
+{
+    private readonly Stream _innerStream;
+    private readonly long _maxLength;
+    private long _bytesRead;
+
+    public LimitedStream(Stream innerStream, long maxLength)
+    {
+        _innerStream = innerStream;
+        _maxLength = maxLength;
+    }
+
+    public override bool CanRead => _innerStream.CanRead;
+    public override bool CanSeek => false;
+    public override bool CanWrite => false;
+    public override long Length => _innerStream.Length;
+    public override long Position
+    {
+        get => _innerStream.Position;
+        set => throw new NotSupportedException();
+    }
+
+    public override int Read(byte[] buffer, int offset, int count)
+    {
+        var remaining = _maxLength - _bytesRead;
+        if (remaining <= 0) return 0;
+        
+        var toRead = (int)Math.Min(count, remaining);
+        var read = _innerStream.Read(buffer, offset, toRead);
+        _bytesRead += read;
+        return read;
+    }
+
+    public override async Task<int> ReadAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken)
+    {
+        var remaining = _maxLength - _bytesRead;
+        if (remaining <= 0) return 0;
+        
+        var toRead = (int)Math.Min(count, remaining);
+        var read = await _innerStream.ReadAsync(buffer, offset, toRead, cancellationToken).ConfigureAwait(false);
+        _bytesRead += read;
+        return read;
+    }
+
+    public override void Flush() => _innerStream.Flush();
+    public override long Seek(long offset, SeekOrigin origin) => throw new NotSupportedException();
+    public override void SetLength(long value) => throw new NotSupportedException();
+    public override void Write(byte[] buffer, int offset, int count) => throw new NotSupportedException();
 }

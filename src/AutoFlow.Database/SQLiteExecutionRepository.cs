@@ -116,12 +116,16 @@ public sealed class SQLiteExecutionRepository : IExecutionRepository, IDisposabl
         await using var connection = CreateConnection();
         await connection.OpenAsync(cancellationToken).ConfigureAwait(false);
 
-        var stepsJson = JsonSerializer.Serialize(result.Steps, JsonOptions.Default);
-        var metadataJson = workflowContext is not null
-            ? JsonSerializer.Serialize(workflowContext.Metadata, JsonOptions.Default)
-            : null;
+        await using var transaction = await connection.BeginTransactionAsync(cancellationToken).ConfigureAwait(false);
 
-        var sql = @"
+        try
+        {
+            var stepsJson = JsonSerializer.Serialize(result.Steps, JsonOptions.Default);
+            var metadataJson = workflowContext is not null
+                ? JsonSerializer.Serialize(workflowContext.Metadata, JsonOptions.Default)
+                : null;
+
+            var sql = @"
             INSERT INTO executions (
                 run_id, workflow_name, file_path, status,
                 started_at_utc, finished_at_utc, duration_ms,
@@ -136,26 +140,34 @@ public sealed class SQLiteExecutionRepository : IExecutionRepository, IDisposabl
             SELECT last_insert_rowid();
         ";
 
-        var id = await connection.QuerySingleAsync<long>(sql, new
+            var id = await connection.QuerySingleAsync<long>(sql, new
+            {
+                RunId = workflowContext?.RunId ?? Guid.NewGuid().ToString("N"),
+                result.WorkflowName,
+                FilePath = workflowContext?.FilePath,
+                Status = result.Status.ToString(),
+                StartedAtUtc = result.StartedAtUtc.ToString("O"),
+                FinishedAtUtc = result.FinishedAtUtc.ToString("O"),
+                DurationMs = (long)result.Duration.TotalMilliseconds,
+                StepsTotal = result.Steps.Count,
+                StepsPassed = result.Steps.Count(s => s.Status == ExecutionStatus.Passed),
+                StepsFailed = result.Steps.Count(s => s.Status == ExecutionStatus.Failed),
+                ErrorMessage = result.Steps.FirstOrDefault(s => s.ErrorMessage is not null)?.ErrorMessage,
+                StepsJson = stepsJson,
+                MetadataJson = metadataJson
+            }, transaction).ConfigureAwait(false);
+
+            await transaction.CommitAsync(cancellationToken).ConfigureAwait(false);
+
+            _logger.LogInformation("Сохранено выполнение {RunId} (ID: {Id})", workflowContext?.RunId, id);
+
+            return id;
+        }
+        catch
         {
-            RunId = workflowContext?.RunId ?? Guid.NewGuid().ToString("N"),
-            result.WorkflowName,
-            FilePath = workflowContext?.FilePath,
-            Status = result.Status.ToString(),
-            StartedAtUtc = result.StartedAtUtc.ToString("O"),
-            FinishedAtUtc = result.FinishedAtUtc.ToString("O"),
-            DurationMs = (long)result.Duration.TotalMilliseconds,
-            StepsTotal = result.Steps.Count,
-            StepsPassed = result.Steps.Count(s => s.Status == ExecutionStatus.Passed),
-            StepsFailed = result.Steps.Count(s => s.Status == ExecutionStatus.Failed),
-            ErrorMessage = result.Steps.FirstOrDefault(s => s.ErrorMessage is not null)?.ErrorMessage,
-            StepsJson = stepsJson,
-            MetadataJson = metadataJson
-        }).ConfigureAwait(false);
-
-        _logger.LogInformation("Сохранено выполнение {RunId} (ID: {Id})", workflowContext?.RunId, id);
-
-        return id;
+            await transaction.RollbackAsync(cancellationToken).ConfigureAwait(false);
+            throw;
+        }
     }
 
     public async Task<ExecutionRecord?> GetByRunIdAsync(string runId, CancellationToken cancellationToken = default)
