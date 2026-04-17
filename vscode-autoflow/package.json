@@ -1,0 +1,216 @@
+{
+  "name": "autoflow",
+  "displayName": "AutoFlow.NET",
+  "description": "Professional VS Code extension for AutoFlow.NET: syntax highlighting, IntelliSense, code navigation, CLI integration",
+  "version": "1.1.0",
+  "publisher": "autoflow-net",
+  "license": "MIT",
+  "icon": "images/icon.png",
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "categories": [
+    "Programming Languages",
+    "Snippets",
+    "Debuggers",
+    "Other"
+  ],
+  "keywords": [
+    "yaml",
+    "workflow",
+    "automation",
+    "autoflow",
+    "playwright",
+    "browser automation",
+    "intellisense",
+    "snippets"
+  ],
+  "activationEvents": [
+    "onLanguage:yaml",
+    "workspaceContains:**/*.yaml",
+    "workspaceContains:**/*.yml"
+  ],
+  "main": "./out/extension.js",
+  "contributes": {
+    "languages": [
+      {
+        "id": "autoflow",
+        "aliases": [
+          "AutoFlow",
+          "autoflow"
+        ],
+        "extensions": [
+          ".yaml",
+          ".yml"
+        ],
+        "configuration": "./language-configuration.json"
+      }
+    ],
+    "grammars": [
+      {
+        "language": "autoflow",
+        "scopeName": "source.autoflow",
+        "path": "./syntaxes/autoflow.tmLanguage.json"
+      }
+    ],
+    "snippets": [
+      {
+        "language": "autoflow",
+        "path": "./snippets/autoflow.json"
+      }
+    ],
+    "commands": [
+      {
+        "command": "autoflow.run",
+        "title": "AutoFlow: Run Workflow",
+        "icon": "$(play)"
+      },
+      {
+        "command": "autoflow.validate",
+        "title": "AutoFlow: Validate Workflow",
+        "icon": "$(check)"
+      },
+      {
+        "command": "autoflow.history",
+        "title": "AutoFlow: Show Execution History",
+        "icon": "$(history)"
+      },
+      {
+        "command": "autoflow.listKeywords",
+        "title": "AutoFlow: List Available Keywords",
+        "icon": "$(list-unordered)"
+      },
+      {
+        "command": "autoflow.stats",
+        "title": "AutoFlow: Show Statistics",
+        "icon": "$(graph)"
+      },
+      {
+        "command": "autoflow.showStatus",
+        "title": "AutoFlow: Show Quick Actions"
+      },
+      {
+        "command": "autoflow.gotoLine",
+        "title": "AutoFlow: Go to Line"
+      }
+    ],
+    "menus": {
+      "editor/title": [
+        {
+          "command": "autoflow.run",
+          "when": "editorLangId == autoflow",
+          "group": "navigation@1"
+        },
+        {
+          "command": "autoflow.validate",
+          "when": "editorLangId == autoflow",
+          "group": "navigation@2"
+        }
+      ],
+      "editor/context": [
+        {
+          "command": "autoflow.run",
+          "when": "editorLangId == autoflow",
+          "group": "autoflow@1"
+        },
+        {
+          "command": "autoflow.validate",
+          "when": "editorLangId == autoflow",
+          "group": "autoflow@2"
+        },
+        {
+          "command": "autoflow.history",
+          "when": "editorLangId == autoflow",
+          "group": "autoflow@3"
+        }
+      ],
+      "view/title": [
+        {
+          "command": "autoflow.run",
+          "when": "view == autoflow-explorer",
+          "group": "navigation@1"
+        },
+        {
+          "command": "autoflow.validate",
+          "when": "view == autoflow-explorer",
+          "group": "navigation@2"
+        }
+      ]
+    },
+    "views": {
+      "explorer": [
+        {
+          "id": "autoflow-explorer",
+          "name": "AutoFlow Workflow",
+          "when": "editorLangId == autoflow || resourceExtname == .yaml || resourceExtname == .yml",
+          "icon": "images/icon.png",
+          "contextualTitle": "AutoFlow Workflow Structure"
+        }
+      ]
+    },
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "autoflow",
+          "title": "AutoFlow",
+          "icon": "images/icon.svg"
+        }
+      ]
+    },
+    "configuration": {
+      "title": "AutoFlow",
+      "properties": {
+        "autoflow.cliPath": {
+          "type": "string",
+          "default": "",
+          "description": "Path to AutoFlow CLI (dotnet run --project path/to/AutoFlow.Cli). Leave empty to auto-detect."
+        },
+        "autoflow.projectPath": {
+          "type": "string",
+          "default": "",
+          "description": "Path to AutoFlow.Cli project folder. Leave empty to auto-detect from workspace."
+        },
+        "autoflow.outputFormat": {
+          "type": "string",
+          "enum": [
+            "json",
+            "html"
+          ],
+          "default": "json",
+          "description": "Output format for workflow execution reports"
+        },
+        "autoflow.showOutputOnRun": {
+          "type": "boolean",
+          "default": true,
+          "description": "Show output panel when running a workflow"
+        },
+        "autoflow.enableStatusBar": {
+          "type": "boolean",
+          "default": true,
+          "description": "Show AutoFlow status bar item"
+        }
+      }
+    }
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run compile",
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./",
+    "lint": "eslint src --ext ts",
+    "package": "vsce package"
+  },
+  "devDependencies": {
+    "@types/node": "^20.10.0",
+    "@types/vscode": "^1.85.0",
+    "@vscode/vsce": "^2.22.0",
+    "typescript": "^5.3.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/chelslava/autoflow-net.git"
+  },
+  "bugs": {
+    "url": "https://github.com/chelslava/autoflow-net/issues"
+  },
+  "homepage": "https://github.com/chelslava/autoflow-net#readme"
+}
