@@ -62,11 +62,17 @@ public sealed class BrowserOpenKeyword : IKeywordHandler<BrowserOpenArgs>
     }
 
     public static IPage? GetPage(string browserId) =>
-        BrowserManagerProvider.Manager?.GetPage(browserId);
+        BrowserManagerProvider.WithManager(m => m.GetPage(browserId));
 
     public static IBrowser? GetBrowser(string browserId) =>
-        BrowserManagerProvider.Manager?.GetBrowser(browserId);
+        BrowserManagerProvider.WithManager(m => m.GetBrowser(browserId));
 
-    public static async Task CloseBrowserAsync(string browserId) =>
-        await (BrowserManagerProvider.Manager?.CloseBrowserAsync(browserId) ?? Task.CompletedTask).ConfigureAwait(false);
+    public static async Task CloseBrowserAsync(string browserId)
+    {
+        await BrowserManagerProvider.WithManagerAsync(async m =>
+        {
+            await m.CloseBrowserAsync(browserId).ConfigureAwait(false);
+            return true;
+        }).ConfigureAwait(false);
+    }
 }

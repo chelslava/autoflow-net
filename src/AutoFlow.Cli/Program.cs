@@ -13,6 +13,7 @@ using AutoFlow.Library.Http;
 using AutoFlow.Parser;
 using AutoFlow.Reporting;
 using AutoFlow.Runtime;
+using AutoFlow.Runtime.Hooks;
 using AutoFlow.Runtime.Resilience;
 using AutoFlow.Runtime.Secrets;
 using AutoFlow.Runtime.Telemetry;
@@ -58,6 +59,8 @@ builder.Services.AddSingleton<SecretResolver>();
 
 // Lifecycle hooks - регистрируем все реализации из DI
 builder.Services.AddSingleton<WorkflowHookRunner>();
+builder.Services.AddSingleton<ProgressHook>();
+builder.Services.AddSingleton<IWorkflowLifecycleHook, ProgressHook>(sp => sp.GetRequiredService<ProgressHook>());
 
 // Database
 builder.Services.AddAutoFlowDatabase();
@@ -118,7 +121,23 @@ validateCommand.SetHandler((FileInfo file) =>
 
     var parser = host.Services.GetRequiredService<IWorkflowParser>();
     var yaml = File.ReadAllText(file.FullName);
-    var document = parser.Parse(yaml);
+
+    WorkflowDocument document;
+    try
+    {
+        document = parser.Parse(yaml);
+    }
+    catch (YamlDotNet.Core.YamlException yamlEx)
+    {
+        Console.WriteLine($"✗ YAML parse error:");
+        Console.WriteLine($"  Line {yamlEx.Start.Line}, Column {yamlEx.Start.Column}: {yamlEx.Message}");
+        return;
+    }
+    catch (Exception ex) when (ex is not null)
+    {
+        Console.WriteLine($"✗ Parse error: {ex.Message}");
+        return;
+    }
 
     var validator = new WorkflowValidator(registry);
     var result = validator.Validate(document);
@@ -215,8 +234,12 @@ runCommand.SetHandler(async (FileInfo file, FileInfo? output, string? format, st
     }
 
     var runtime = host.Services.GetRequiredService<IRuntimeEngine>();
+    var progressHook = host.Services.GetRequiredService<ProgressHook>();
+    
+    var totalSteps = CountAllSteps(document);
+    progressHook.SetTotalSteps(totalSteps);
 
-    Console.WriteLine($"→ Выполняется: {document.Name}");
+    Console.WriteLine($"→ Выполняется: {document.Name} ({totalSteps} steps)");
     if (!string.IsNullOrEmpty(runId))
         Console.WriteLine($"  Run ID: {runId}");
 
@@ -225,18 +248,10 @@ runCommand.SetHandler(async (FileInfo file, FileInfo? output, string? format, st
         new RuntimeLaunchOptions { RunId = runId });
 
     var statusIcon = result.Status == ExecutionStatus.Passed ? "✓" : "✗";
+    Console.WriteLine();
     Console.WriteLine($"{statusIcon} Workflow: {result.WorkflowName}");
     Console.WriteLine($"  Статус: {result.Status}");
-    Console.WriteLine($"  Шагов: {result.Steps.Count}");
     Console.WriteLine($"  Длительность: {result.Duration.TotalMilliseconds}ms");
-
-    foreach (var step in result.Steps)
-    {
-        var stepIcon = step.Status == ExecutionStatus.Passed ? "  ✓" : "  ✗";
-        Console.WriteLine($"{stepIcon} {step.StepId}: {step.KeywordName} ({step.Duration.TotalMilliseconds}ms)");
-        if (step.ErrorMessage is not null)
-            Console.WriteLine($"     Error: {step.ErrorMessage}");
-    }
 
     if (output is not null)
     {
@@ -285,6 +300,20 @@ static int CountSteps(List<IWorkflowNode> nodes)
             GroupNode group => CountSteps(group.Steps),
             _ => 0
         };
+    }
+    return count;
+}
+
+static int CountAllSteps(WorkflowDocument document)
+{
+    var count = 0;
+    foreach (var task in document.Tasks.Values)
+    {
+        count += CountSteps(task.Steps);
+        if (task.OnError is not null)
+            count += CountSteps(task.OnError.Steps);
+        if (task.Finally is not null)
+            count += CountSteps(task.Finally.Steps);
     }
     return count;
 }

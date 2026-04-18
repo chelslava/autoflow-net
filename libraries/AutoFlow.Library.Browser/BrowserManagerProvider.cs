@@ -42,9 +42,11 @@ public static class BrowserManagerProvider
             if (_disposed || _manager is null)
                 return;
 
-            await _manager.DisposeAsync().ConfigureAwait(false);
+            var manager = _manager;
             _manager = null;
             _disposed = true;
+            
+            await manager.DisposeAsync().ConfigureAwait(false);
         }
         finally
         {
@@ -59,6 +61,36 @@ public static class BrowserManagerProvider
         {
             _manager = null;
             _disposed = false;
+        }
+        finally
+        {
+            _lock.Release();
+        }
+    }
+
+    public static T? WithManager<T>(Func<BrowserManager, T> action) where T : class?
+    {
+        _lock.Wait();
+        try
+        {
+            if (_disposed || _manager is null)
+                return null;
+            return action(_manager);
+        }
+        finally
+        {
+            _lock.Release();
+        }
+    }
+
+    public static async Task<T?> WithManagerAsync<T>(Func<BrowserManager, Task<T>> action) where T : class?
+    {
+        await _lock.WaitAsync().ConfigureAwait(false);
+        try
+        {
+            if (_disposed || _manager is null)
+                return null;
+            return await action(_manager).ConfigureAwait(false);
         }
         finally
         {
