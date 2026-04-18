@@ -59,6 +59,58 @@
         "path": "./snippets/autoflow.json"
       }
     ],
+    "breakpoints": [
+      {
+        "language": "autoflow"
+      }
+    ],
+    "debuggers": [
+      {
+        "type": "autoflow",
+        "label": "AutoFlow Debugger",
+        "program": "./out/debug/autoFlowDebug.js",
+        "runtime": "node",
+        "configurationAttributes": {
+          "launch": {
+            "required": ["program"],
+            "properties": {
+              "program": {
+                "type": "string",
+                "description": "Absolute path to the workflow YAML file",
+                "default": "${file}"
+              },
+              "stopOnEntry": {
+                "type": "boolean",
+                "description": "Automatically stop on entry",
+                "default": true
+              }
+            }
+          }
+        },
+        "initialConfigurations": [
+          {
+            "type": "autoflow",
+            "request": "launch",
+            "name": "Debug Workflow",
+            "program": "${file}",
+            "stopOnEntry": true
+          }
+        ],
+        "configurationSnippets": [
+          {
+            "label": "AutoFlow: Debug Workflow",
+            "description": "Debug an AutoFlow workflow",
+            "body": {
+              "type": "autoflow",
+              "request": "launch",
+              "name": "Debug Workflow",
+              "program": "^\"\\${file}\"",
+              "stopOnEntry": true
+            }
+          }
+        ]
+      }
+    ],
     "commands": [
       {
         "command": "autoflow.run",
@@ -197,12 +249,18 @@
     "compile": "tsc -p ./",
     "watch": "tsc -watch -p ./",
     "lint": "eslint src --ext ts",
-    "package": "vsce package"
+    "package": "vsce package",
+    "test": "node ./out/test/runTest.js"
   },
   "devDependencies": {
+    "@types/mocha": "^10.0.6",
     "@types/node": "^20.10.0",
     "@types/vscode": "^1.85.0",
+    "@vscode/debugadapter": "^1.64.0",
+    "@vscode/debugprotocol": "^1.64.0",
+    "@vscode/test-electron": "^2.3.8",
     "@vscode/vsce": "^2.22.0",
+    "mocha": "^10.3.0",
     "typescript": "^5.3.0"
   },
   "repository": {

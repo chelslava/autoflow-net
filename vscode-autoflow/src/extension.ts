@@ -12,12 +12,18 @@ import { AutoFlowWorkspaceSymbolProvider } from './providers/workspaceSymbolProv
 import { AutoFlowTreeDataProvider } from './providers/treeViewProvider';
 import { AutoFlowStatusBar } from './providers/statusBar';
 import { registerCommands } from './commands';
+import { AutoFlowDebugAdapterDescriptorFactory } from './debug/debugAdapter';
 
 let providersRegistered = false;
 
 export function activate(context: vscode.ExtensionContext) {
     const statusBar = new AutoFlowStatusBar();
     context.subscriptions.push(statusBar);
+
+    const debugAdapterFactory = new AutoFlowDebugAdapterDescriptorFactory();
+    context.subscriptions.push(
+        vscode.debug.registerDebugAdapterDescriptorFactory('autoflow', debugAdapterFactory)
+    );
 
     context.subscriptions.push(
         vscode.commands.registerCommand('autoflow.showStatus', () => statusBar.showQuickPick())
