@@ -89,9 +89,10 @@ builder.Services.AddKeywordsFromAssembly(
 
 using var host = builder.Build();
 
-// Initialize BrowserManagerProvider for backward compatibility
+#pragma warning disable CS0618 // Type or member is obsolete
 var browserManager = host.Services.GetRequiredService<BrowserManager>();
 BrowserManagerProvider.Initialize(browserManager);
+#pragma warning restore CS0618
 
 var fileArgument = new Argument<FileInfo>(
     name: "file",
@@ -802,17 +803,18 @@ graphCommand.SetHandler((FileInfo file) =>
 
     try
     {
+        var parser = host.Services.GetRequiredService<IWorkflowParser>();
         var yaml = File.ReadAllText(file.FullName);
-        var document = loader.LoadFromString(yaml, file.DirectoryName);
+        var document = parser.ParseFromString(yaml, file.DirectoryName);
         
         Console.WriteLine("```mermaid");
         Console.WriteLine("flowchart TD");
         Console.WriteLine($"    subgraph {document.Name}[{document.Name}]");
         
-        foreach (var (taskName, task) in document.Tasks)
+        foreach (var task in document.Tasks)
         {
-            Console.WriteLine($"        subgraph {taskName}[Task: {taskName}]");
-            GenerateStepsGraph(task.Steps, taskName);
+            Console.WriteLine($"        subgraph {task.Name}[Task: {task.Name}]");
+            GenerateStepsGraph(task.Steps, task.Name);
             Console.WriteLine("        end");
         }
         
@@ -823,16 +825,16 @@ graphCommand.SetHandler((FileInfo file) =>
     {
         Console.WriteLine($"✗ Parse error: {ex.Message}");
     }
-}, graphFileArgument);
+}, graphFileArgument, parserOption);
 
 static void GenerateStepsGraph(List<IWorkflowNode> steps, string parent)
 {
     for (var i = 0; i < steps.Count; i++)
     {
-        var node = steps[i];
+        var workflowNode = steps[i];
         var nodeId = $"{parent}_{i}";
         
-        switch (node)
+        switch (workflowNode)
         {
             case StepNode step:
                 var label = !string.IsNullOrEmpty(step.Id) ? step.Id : step.Uses ?? "unnamed";
@@ -840,9 +842,9 @@ static void GenerateStepsGraph(List<IWorkflowNode> steps, string parent)
                 break;
             case IfNode ifNode:
                 Console.WriteLine($"            {nodeId}{{\"if: condition\"}}");
-                GenerateStepsGraph(ifNode.ThenSteps, $"{nodeId}_then");
-                if (ifNode.ElseSteps.Count > 0)
-                    GenerateStepsGraph(ifNode.ElseSteps, $"{nodeId}_else");
+                GenerateStepsGraph(ifNode.Then, $"{nodeId}_then");
+                if (ifNode.Else.Count > 0)
+                    GenerateStepsGraph(ifNode.Else, $"{nodeId}_else");
                 break;
             case ParallelNode parallel:
                 Console.WriteLine($"            {nodeId}[/\"parallel x{parallel.Steps.Count}\"\\]");
@@ -853,8 +855,8 @@ static void GenerateStepsGraph(List<IWorkflowNode> steps, string parent)
             case CallNode call:
                 Console.WriteLine($"            {nodeId}[[\"call: {call.Task}\"]]");
                 break;
-            case RetryNode retry:
-                Console.WriteLine($"            {nodeId}(\"retry x{retry.MaxAttempts}\")");
+            case GroupNode group:
+                Console.WriteLine($"            {nodeId}(\"group: {group.Name}\")");
                 break;
         }
         
