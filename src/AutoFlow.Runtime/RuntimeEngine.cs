@@ -13,10 +13,12 @@
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using AutoFlow.Abstractions;
+using AutoFlow.Runtime.Telemetry;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
@@ -28,6 +30,7 @@ public sealed class RuntimeEngine : IRuntimeEngine
     private readonly KeywordExecutor _keywordExecutor;
     private readonly WorkflowHookRunner _hookRunner;
     private readonly SecretResolver _secretResolver;
+    private readonly TelemetryProvider _telemetry;
     private readonly ILogger<RuntimeEngine> _logger;
 
     public RuntimeEngine(
@@ -35,12 +38,14 @@ public sealed class RuntimeEngine : IRuntimeEngine
         KeywordExecutor keywordExecutor,
         WorkflowHookRunner hookRunner,
         SecretResolver secretResolver,
+        TelemetryProvider telemetry,
         ILogger<RuntimeEngine> logger)
     {
         _rootServiceProvider = serviceProvider ?? throw new ArgumentNullException(nameof(serviceProvider));
         _keywordExecutor = keywordExecutor ?? throw new ArgumentNullException(nameof(keywordExecutor));
         _hookRunner = hookRunner ?? throw new ArgumentNullException(nameof(hookRunner));
         _secretResolver = secretResolver ?? throw new ArgumentNullException(nameof(secretResolver));
+        _telemetry = telemetry ?? throw new ArgumentNullException(nameof(telemetry));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
@@ -54,6 +59,9 @@ public sealed class RuntimeEngine : IRuntimeEngine
 
         var runId = options.RunId ?? Guid.NewGuid().ToString("N");
         var startedAt = DateTimeOffset.UtcNow;
+
+        _telemetry.RecordWorkflowStart(document.Name);
+        using var workflowSpan = _telemetry.StartWorkflowSpan(document.Name, runId);
 
         var runResult = new RunResult
         {
@@ -103,6 +111,13 @@ public sealed class RuntimeEngine : IRuntimeEngine
         finally
         {
             runResult.FinishedAtUtc = DateTimeOffset.UtcNow;
+            
+            var durationMs = (runResult.FinishedAtUtc - startedAt).TotalMilliseconds;
+            _telemetry.RecordWorkflowEnd(document.Name, runResult.Status.ToString(), durationMs);
+            
+            workflowSpan?.SetStatus(runResult.Status == ExecutionStatus.Passed ? ActivityStatusCode.Ok : ActivityStatusCode.Error);
+            workflowSpan?.Dispose();
+            
             await _hookRunner.OnWorkflowEndAsync(workflowContext, runResult).ConfigureAwait(false);
             await _hookRunner.OnAfterWorkflowEndAsync(workflowContext, runResult).ConfigureAwait(false);
         }
@@ -229,11 +244,14 @@ public sealed class RuntimeEngine : IRuntimeEngine
             return;
         }
 
+        var stepStartedAt = DateTimeOffset.UtcNow;
+        using var stepSpan = _telemetry.StartStepSpan(workflowContext.WorkflowName, step.Id, step.Uses);
+
         var stepResult = new StepExecutionResult
         {
             StepId = step.Id,
             KeywordName = step.Uses,
-            StartedAtUtc = DateTimeOffset.UtcNow,
+            StartedAtUtc = stepStartedAt,
             Status = ExecutionStatus.Passed
         };
 
@@ -377,6 +395,13 @@ public sealed class RuntimeEngine : IRuntimeEngine
         }
 
         stepResult.FinishedAtUtc = DateTimeOffset.UtcNow;
+        
+        var stepDurationMs = (stepResult.FinishedAtUtc - stepStartedAt).TotalMilliseconds;
+        _telemetry.RecordStepEnd(workflowContext.WorkflowName, step.Uses, stepResult.Status.ToString(), stepDurationMs);
+        
+        stepSpan?.SetStatus(stepResult.Status == ExecutionStatus.Passed ? ActivityStatusCode.Ok : ActivityStatusCode.Error);
+        stepSpan?.Dispose();
+        
         runResult.AddStep(stepResult);
     }
 

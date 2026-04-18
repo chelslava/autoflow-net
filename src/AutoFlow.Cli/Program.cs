@@ -15,6 +15,7 @@ using AutoFlow.Reporting;
 using AutoFlow.Runtime;
 using AutoFlow.Runtime.Resilience;
 using AutoFlow.Runtime.Secrets;
+using AutoFlow.Runtime.Telemetry;
 using AutoFlow.Validation;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -31,6 +32,7 @@ var registry = new KeywordRegistry();
 // Core services
 builder.Services.AddSingleton(registry);
 builder.Services.AddSingleton<KeywordExecutor>();
+builder.Services.AddSingleton<TelemetryProvider>();
 builder.Services.AddSingleton<IRuntimeEngine, RuntimeEngine>();
 builder.Services.AddSingleton<IWorkflowParser, YamlWorkflowParser>();
 builder.Services.AddSingleton<WorkflowLoader>();

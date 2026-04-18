@@ -8,6 +8,7 @@
   <ItemGroup>
     <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" />
     <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" />
+    <PackageReference Include="System.Diagnostics.DiagnosticSource" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\AutoFlow.Abstractions\AutoFlow.Abstractions.csproj" />

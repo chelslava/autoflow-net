@@ -8,6 +8,7 @@ using AutoFlow.Abstractions;
 using AutoFlow.Library.Assertions;
 using AutoFlow.Runtime;
 using AutoFlow.Runtime.Secrets;
+using AutoFlow.Runtime.Telemetry;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Xunit;
@@ -25,6 +26,7 @@ public sealed class RuntimeEngineTests
         var registry = new KeywordRegistry();
         services.AddSingleton(registry);
         services.AddSingleton<KeywordExecutor>();
+        services.AddSingleton<TelemetryProvider>();
         services.AddSingleton<IRuntimeEngine, RuntimeEngine>();
 
         // Новые зависимости
