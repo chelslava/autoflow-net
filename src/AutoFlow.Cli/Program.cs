@@ -61,6 +61,7 @@ builder.Services.AddSingleton<SecretResolver>();
 builder.Services.AddSingleton<WorkflowHookRunner>();
 builder.Services.AddSingleton<ProgressHook>();
 builder.Services.AddSingleton<IWorkflowLifecycleHook, ProgressHook>(sp => sp.GetRequiredService<ProgressHook>());
+builder.Services.AddSingleton<IWorkflowLifecycleHook, BrowserCleanupHook>();
 
 // Database
 builder.Services.AddAutoFlowDatabase();
@@ -242,10 +243,30 @@ runCommand.SetHandler(async (FileInfo file, FileInfo? output, string? format, st
     Console.WriteLine($"→ Выполняется: {document.Name} ({totalSteps} steps)");
     if (!string.IsNullOrEmpty(runId))
         Console.WriteLine($"  Run ID: {runId}");
+    Console.WriteLine("  Press Ctrl+C to cancel...");
 
-    var result = await runtime.ExecuteAsync(
-        document,
-        new RuntimeLaunchOptions { RunId = runId });
+    using var cts = new CancellationTokenSource();
+    Console.CancelKeyPress += (sender, e) =>
+    {
+        e.Cancel = true;
+        Console.WriteLine("\nCancellation requested...");
+        cts.Cancel();
+    };
+
+    RunResult result;
+    try
+    {
+        result = await runtime.ExecuteAsync(
+            document,
+            new RuntimeLaunchOptions { RunId = runId },
+            cts.Token);
+    }
+    catch (OperationCanceledException)
+    {
+        Console.WriteLine();
+        Console.WriteLine("✗ Workflow cancelled by user");
+        return;
+    }
 
     var statusIcon = result.Status == ExecutionStatus.Passed ? "✓" : "✗";
     Console.WriteLine();

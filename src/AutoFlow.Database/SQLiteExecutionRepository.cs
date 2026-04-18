@@ -23,17 +23,15 @@ namespace AutoFlow.Database;
 /// </summary>
 public sealed class SQLiteExecutionRepository : IExecutionRepository, IDisposable
 {
+    private const int DefaultCommandTimeoutSeconds = 30;
+    
     private readonly string _connectionString;
     private readonly ILogger<SQLiteExecutionRepository> _logger;
     private readonly SemaphoreSlim _initLock = new(1, 1);
     private readonly SecretMasker? _secretMasker;
+    private readonly int _commandTimeoutSeconds;
     private bool _initialized;
 
-    /// <summary>
-    /// Создаёт репозиторий с указанным путём к файлу БД.
-    /// </summary>
-    /// <param name="databasePath">Путь к файлу SQLite (будет создан, если не существует).</param>
-    /// <param name="logger">Логгер.</param>
     public SQLiteExecutionRepository(string databasePath, ILogger<SQLiteExecutionRepository> logger)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(databasePath);
@@ -41,6 +39,7 @@ public sealed class SQLiteExecutionRepository : IExecutionRepository, IDisposabl
 
         _connectionString = $"Data Source={databasePath}";
         _logger = logger;
+        _commandTimeoutSeconds = DefaultCommandTimeoutSeconds;
     }
 
     public SQLiteExecutionRepository(
@@ -51,23 +50,26 @@ public sealed class SQLiteExecutionRepository : IExecutionRepository, IDisposabl
         _secretMasker = secretMasker;
     }
 
-    public SQLiteExecutionRepository(string connectionString, ILogger<SQLiteExecutionRepository> logger, bool isConnectionString)
-    {
-        ArgumentNullException.ThrowIfNull(logger);
-        _connectionString = isConnectionString ? connectionString : $"Data Source={connectionString}";
-        _logger = logger;
-    }
-
     public SQLiteExecutionRepository(
-        string connectionString,
+        string databasePath,
         ILogger<SQLiteExecutionRepository> logger,
-        bool isConnectionString,
-        SecretMasker? secretMasker = null) : this(connectionString, logger, isConnectionString)
+        SecretMasker? secretMasker,
+        int commandTimeoutSeconds) : this(databasePath, logger, secretMasker)
     {
-        _secretMasker = secretMasker;
+        _commandTimeoutSeconds = commandTimeoutSeconds > 0 
+            ? commandTimeoutSeconds 
+            : DefaultCommandTimeoutSeconds;
     }
 
-    private SqliteConnection CreateConnection() => new(_connectionString);
+    private SqliteConnection CreateConnection()
+    {
+        var connection = new SqliteConnection(_connectionString);
+        connection.Open();
+        using var command = connection.CreateCommand();
+        command.CommandText = $"PRAGMA busy_timeout = {_commandTimeoutSeconds * 1000};";
+        command.ExecuteNonQuery();
+        return connection;
+    }
 
     private async Task EnsureInitializedAsync(CancellationToken cancellationToken)
     {

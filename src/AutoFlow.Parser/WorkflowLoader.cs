@@ -102,11 +102,25 @@ public sealed class WorkflowLoader
         // БЕЗОПАСНОСТЬ: Абсолютные пути и path traversal (../) запрещены для защиты от
         // несанкционированного чтения файлов за пределами рабочей директории.
 
-        var resolvedPath = Path.IsPathRooted(importPath)
-            ? importPath
-            : Path.GetFullPath(Path.Join(baseDirectory, importPath));
+        // Reject absolute paths
+        if (Path.IsPathRooted(importPath))
+        {
+            throw new InvalidOperationException(
+                $"Absolute import paths are not allowed: '{importPath}'. " +
+                "Use relative paths within the workflow directory.");
+        }
 
-        // Проверяем, что resolved path находится внутри base directory
+        // Reject path traversal patterns
+        if (importPath.Contains("..") || importPath.Contains("~"))
+        {
+            throw new InvalidOperationException(
+                $"Path traversal detected in import: '{importPath}'. " +
+                "Imports must not contain '..' or '~'.");
+        }
+
+        var resolvedPath = Path.GetFullPath(Path.Join(baseDirectory, importPath));
+
+        // Verify resolved path is within base directory
         var normalizedBase = NormalizePath(baseDirectory);
         var normalizedResolved = NormalizePath(resolvedPath);
 
@@ -115,6 +129,11 @@ public sealed class WorkflowLoader
             throw new InvalidOperationException(
                 $"Import path '{importPath}' is outside allowed directory '{baseDirectory}'. " +
                 "Imports must be within the workflow file's directory tree.");
+        }
+
+        if (!File.Exists(resolvedPath))
+        {
+            throw new FileNotFoundException($"Import file not found: {importPath}");
         }
 
         return resolvedPath;
