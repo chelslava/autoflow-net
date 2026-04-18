@@ -1,0 +1,244 @@
+schema_version: 1
+name: rpa_challenge_reframework
+
+variables:
+  challenge_url: "http://rpachallenge.com/"
+  excel_url: "http://rpachallenge.com/assets/inputFiles/input.xlsx"
+  temp_dir: "temp/rpa_challenge"
+  max_retries: 3
+
+tasks:
+  init:
+    steps:
+      - step:
+          id: log_start
+          uses: log.info
+          with:
+            message: "[INIT] Starting RPA Challenge with REFramework"
+
+      - step:
+          id: create_temp_dir
+          uses: files.write
+          with:
+            path: "${temp_dir}/.gitkeep"
+            content: ""
+
+      - step:
+          id: download_input
+          uses: http.request
+          with:
+            url: "${excel_url}"
+            method: GET
+            saveToFile: "${temp_dir}/input.xlsx"
+            timeoutMs: 30000
+          save_as:
+            statusCode: download_status
+
+      - step:
+          id: open_browser
+          uses: browser.open
+          with:
+            browser: chromium
+            headless: false
+            width: 1280
+            height: 800
+          save_as:
+            browserId: browser_id
+
+      - step:
+          id: navigate_to_challenge
+          uses: browser.goto
+          with:
+            browserId: "${browser_id}"
+            url: "${challenge_url}"
+            timeoutMs: 30000
+
+      - step:
+          id: log_init_done
+          uses: log.info
+          with:
+            message: "[INIT] Initialization complete"
+
+  get_transaction:
+    steps:
+      - step:
+          id: log_get_data
+          uses: log.info
+          with:
+            message: "[GET_TRANSACTION] Retrieving transaction data"
+
+      - step:
+          id: parse_employees
+          uses: json.parse
+          with:
+            json: '[{"firstName":"John","lastName":"Doe","company":"ACME Corp","role":"Developer","address":"123 Main St","email":"john@example.com","phone":"555-123-4567"},{"firstName":"Jane","lastName":"Smith","company":"Tech Inc","role":"Manager","address":"456 Oak Ave","email":"jane@example.com","phone":"555-987-6543"},{"firstName":"Bob","lastName":"Johnson","company":"Data Co","role":"Analyst","address":"789 Pine Rd","email":"bob@example.com","phone":"555-456-7890"}]'
+          save_as:
+            value: employees_data
+
+  process_transaction:
+    steps:
+      - step:
+          id: log_process_start
+          uses: log.info
+          with:
+            message: "[PROCESS_TRANSACTION] Starting form processing"
+
+      - step:
+          id: click_start
+          uses: browser.click
+          with:
+            browserId: "${browser_id}"
+            selector: "button.ng-binding"
+            timeoutMs: 5000
+
+      - step:
+          id: wait_form
+          uses: browser.wait
+          with:
+            browserId: "${browser_id}"
+            selector: "input[ng-model='answer']"
+            state: visible
+            timeoutMs: 5000
+
+      - step:
+          id: fill_fname
+          uses: browser.fill
+          with:
+            browserId: "${browser_id}"
+            selector: "input[ng-model='answer'][placeholder='First Name']"
+            value: "John"
+
+      - step:
+          id: fill_lname
+          uses: browser.fill
+          with:
+            browserId: "${browser_id}"
+            selector: "input[ng-model='answer'][placeholder='Last Name']"
+            value: "Doe"
+
+      - step:
+          id: fill_company
+          uses: browser.fill
+          with:
+            browserId: "${browser_id}"
+            selector: "input[ng-model='answer'][placeholder='Company Name']"
+            value: "ACME Corp"
+
+      - step:
+          id: fill_role
+          uses: browser.fill
+          with:
+            browserId: "${browser_id}"
+            selector: "input[ng-model='answer'][placeholder='Role in Company']"
+            value: "Developer"
+
+      - step:
+          id: fill_address
+          uses: browser.fill
+          with:
+            browserId: "${browser_id}"
+            selector: "input[ng-model='answer'][placeholder='Address']"
+            value: "123 Main St"
+
+      - step:
+          id: fill_email
+          uses: browser.fill
+          with:
+            browserId: "${browser_id}"
+            selector: "input[ng-model='answer'][placeholder='Email']"
+            value: "john@example.com"
+
+      - step:
+          id: fill_phone
+          uses: browser.fill
+          with:
+            browserId: "${browser_id}"
+            selector: "input[ng-model='answer'][placeholder='Phone Number']"
+            value: "555-123-4567"
+
+      - step:
+          id: submit
+          uses: browser.click
+          with:
+            browserId: "${browser_id}"
+            selector: "input[type='submit']"
+
+      - step:
+          id: wait_result
+          uses: browser.wait
+          with:
+            browserId: "${browser_id}"
+            selector: "div.message, input[ng-model='answer']"
+            state: visible
+            timeoutMs: 3000
+
+      - step:
+          id: log_process_done
+          uses: log.info
+          with:
+            message: "[PROCESS_TRANSACTION] Form submitted successfully"
+
+  end_process:
+    steps:
+      - step:
+          id: final_screenshot
+          uses: browser.screenshot
+          with:
+            browserId: "${browser_id}"
+            path: "reports/rpa_result.png"
+            fullPage: true
+
+      - step:
+          id: log_end_process
+          uses: log.info
+          with:
+            message: "[END_PROCESS] Workflow completed"
+
+      - step:
+          id: close_browser
+          uses: browser.close
+          with:
+            browserId: "${browser_id}"
+
+      - step:
+          id: cleanup
+          uses: files.delete
+          with:
+            path: "${temp_dir}"
+
+  main:
+    on_error:
+      - step:
+          id: error_screenshot
+          uses: browser.screenshot
+          with:
+            browserId: "${browser_id}"
+            path: "reports/error.png"
+            fullPage: true
+
+      - step:
+          id: log_error
+          uses: log.info
+          with:
+            message: "[SYSTEM_ERROR] Error during execution"
+
+    finally:
+      - step:
+          id: ensure_browser_closed
+          uses: browser.close
+          with:
+            browserId: "${browser_id}"
+          continue_on_error: true
+
+      - step:
+          id: ensure_cleanup
+          uses: files.delete
+          with:
+            path: "${temp_dir}"
+          continue_on_error: true
+
+    steps:
+      - call: init
+      - call: get_transaction
+      - call: process_transaction
+      - call: end_process
