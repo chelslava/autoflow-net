@@ -236,13 +236,33 @@ runCommand.SetHandler(async (FileInfo file, FileInfo? output, string? format, st
 
     if (output is not null)
     {
+        var outputPath = output.FullName;
+        var workingDirectory = Directory.GetCurrentDirectory();
+        var normalizedOutput = Path.GetFullPath(outputPath);
+        
+        if (!normalizedOutput.StartsWith(workingDirectory, StringComparison.OrdinalIgnoreCase))
+        {
+            Console.WriteLine($"Ошибка: --output должен быть внутри рабочей директории: {workingDirectory}");
+            return;
+        }
+        
+        if (normalizedOutput.Contains(".."))
+        {
+            Console.WriteLine("Ошибка: --output не может содержать path traversal (../)");
+            return;
+        }
+        
         var reportFormat = DetermineReportFormat(output.FullName, format);
         var reportContent = reportFormat == "html"
             ? htmlReportGenerator.Generate(result)
             : jsonReportGenerator.Generate(result);
         
-        await File.WriteAllTextAsync(output.FullName, reportContent);
-        Console.WriteLine($"  Отчёт ({reportFormat}): {output.FullName}");
+        var outputDir = Path.GetDirectoryName(normalizedOutput);
+        if (!string.IsNullOrEmpty(outputDir) && !Directory.Exists(outputDir))
+            Directory.CreateDirectory(outputDir);
+        
+        await File.WriteAllTextAsync(normalizedOutput, reportContent);
+        Console.WriteLine($"  Отчёт ({reportFormat}): {normalizedOutput}");
     }
 }, fileArgument, outputOption, outputFormatOption, runIdOption, dryRunOption);
 

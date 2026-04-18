@@ -30,7 +30,8 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<IExecutionRepository>(sp =>
         {
             var logger = sp.GetRequiredService<Microsoft.Extensions.Logging.ILogger<SQLiteExecutionRepository>>();
-            return new SQLiteExecutionRepository(databasePath, logger);
+            var secretMasker = sp.GetService<SecretMasker>();
+            return new SQLiteExecutionRepository(databasePath, logger, secretMasker);
         });
 
         services.AddSingleton<IWorkflowLifecycleHook, DatabaseHook>();

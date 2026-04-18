@@ -97,14 +97,27 @@ public sealed class WorkflowLoader
     {
         // Поддержка разных форматов путей:
         // - ./relative/path.yaml
-        // - ../parent/path.yaml
         // - relative/path.yaml
-        // - /absolute/path.yaml (или C:\absolute\path.yaml на Windows)
+        // 
+        // БЕЗОПАСНОСТЬ: Абсолютные пути и path traversal (../) запрещены для защиты от
+        // несанкционированного чтения файлов за пределами рабочей директории.
 
-        if (Path.IsPathRooted(importPath))
-            return importPath;
+        var resolvedPath = Path.IsPathRooted(importPath)
+            ? importPath
+            : Path.GetFullPath(Path.Join(baseDirectory, importPath));
 
-        return Path.GetFullPath(Path.Join(baseDirectory, importPath));
+        // Проверяем, что resolved path находится внутри base directory
+        var normalizedBase = NormalizePath(baseDirectory);
+        var normalizedResolved = NormalizePath(resolvedPath);
+
+        if (!normalizedResolved.StartsWith(normalizedBase, StringComparison.OrdinalIgnoreCase))
+        {
+            throw new InvalidOperationException(
+                $"Import path '{importPath}' is outside allowed directory '{baseDirectory}'. " +
+                "Imports must be within the workflow file's directory tree.");
+        }
+
+        return resolvedPath;
     }
 
     private static void MergeVariables(

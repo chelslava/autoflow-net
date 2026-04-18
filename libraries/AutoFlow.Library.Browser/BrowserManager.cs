@@ -151,7 +151,14 @@ public sealed class BrowserManager : IAsyncDisposable
 
         if (_playwright is not null)
         {
-            _playwright.Dispose();
+            if (_playwright is IAsyncDisposable asyncDisposable)
+            {
+                await asyncDisposable.DisposeAsync().ConfigureAwait(false);
+            }
+            else
+            {
+                _playwright.Dispose();
+            }
             _playwright = null;
         }
 

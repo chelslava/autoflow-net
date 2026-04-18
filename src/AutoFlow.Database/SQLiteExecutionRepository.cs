@@ -26,6 +26,7 @@ public sealed class SQLiteExecutionRepository : IExecutionRepository, IDisposabl
     private readonly string _connectionString;
     private readonly ILogger<SQLiteExecutionRepository> _logger;
     private readonly SemaphoreSlim _initLock = new(1, 1);
+    private readonly SecretMasker? _secretMasker;
     private bool _initialized;
 
     /// <summary>
@@ -42,14 +43,28 @@ public sealed class SQLiteExecutionRepository : IExecutionRepository, IDisposabl
         _logger = logger;
     }
 
-    /// <summary>
-    /// Создаёт репозиторий с connection string.
-    /// </summary>
+    public SQLiteExecutionRepository(
+        string databasePath,
+        ILogger<SQLiteExecutionRepository> logger,
+        SecretMasker? secretMasker = null) : this(databasePath, logger)
+    {
+        _secretMasker = secretMasker;
+    }
+
     public SQLiteExecutionRepository(string connectionString, ILogger<SQLiteExecutionRepository> logger, bool isConnectionString)
     {
         ArgumentNullException.ThrowIfNull(logger);
         _connectionString = isConnectionString ? connectionString : $"Data Source={connectionString}";
         _logger = logger;
+    }
+
+    public SQLiteExecutionRepository(
+        string connectionString,
+        ILogger<SQLiteExecutionRepository> logger,
+        bool isConnectionString,
+        SecretMasker? secretMasker = null) : this(connectionString, logger, isConnectionString)
+    {
+        _secretMasker = secretMasker;
     }
 
     private SqliteConnection CreateConnection() => new(_connectionString);
@@ -124,6 +139,12 @@ public sealed class SQLiteExecutionRepository : IExecutionRepository, IDisposabl
             var metadataJson = workflowContext is not null
                 ? JsonSerializer.Serialize(workflowContext.Metadata, JsonOptions.Default)
                 : null;
+
+            if (_secretMasker is not null)
+            {
+                stepsJson = _secretMasker.Mask(stepsJson);
+                metadataJson = metadataJson is not null ? _secretMasker.Mask(metadataJson) : null;
+            }
 
             var sql = @"
             INSERT INTO executions (

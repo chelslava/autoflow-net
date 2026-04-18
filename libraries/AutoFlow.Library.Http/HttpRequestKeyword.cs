@@ -21,6 +21,8 @@ public sealed class HttpRequestArgs
     public int? TimeoutMs { get; set; }
     public bool AllowPrivateNetworks { get; set; }
     public long? MaxResponseSizeBytes { get; set; }
+    public bool LogResponseBody { get; set; }
+    public int MaxLogBodyLength { get; set; } = 1024;
 }
 
 [Keyword("http.request", Category = "HTTP", Description = "Executes an HTTP request.")]
@@ -117,9 +119,16 @@ public sealed class HttpRequestKeyword : IKeywordHandler<HttpRequestArgs>
         var logs = new List<string>
         {
             $"{method} {url}",
-            $"Status: {(int)response.StatusCode} {response.StatusCode}",
-            $"Body: {responseBody}"
+            $"Status: {(int)response.StatusCode} {response.StatusCode}"
         };
+
+        if (args.LogResponseBody && !string.IsNullOrEmpty(responseBody))
+        {
+            var bodyToLog = responseBody.Length > args.MaxLogBodyLength
+                ? responseBody[..args.MaxLogBodyLength] + "...[truncated]"
+                : responseBody;
+            logs.Add($"Body: {bodyToLog}");
+        }
 
         return response.IsSuccessStatusCode
             ? KeywordResult.Success(result, logs)

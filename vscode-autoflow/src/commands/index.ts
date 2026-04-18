@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 import * as path from 'path';
-import { exec } from 'child_process';
+import { spawn } from 'child_process';
 import type { AutoFlowStatusBar } from '../providers/statusBar';
 
 export function registerCommands(context: vscode.ExtensionContext, statusBar?: AutoFlowStatusBar): void {
@@ -79,14 +79,13 @@ async function runWorkflow(statusBar?: AutoFlowStatusBar): Promise<void> {
     const channel = getOutputChannel();
     
     const outputPath = filePath.replace(/\.(ya?ml)$/, `.${outputFormat === 'html' ? 'html' : 'json'}`);
-    const command = `dotnet run --project "${projectPath}" -- run "${filePath}" --output "${outputPath}"`;
     
     if (showOutput) {
         channel.show(true);
     }
     
     channel.appendLine(`Running workflow: ${filePath}`);
-    channel.appendLine(`Command: ${command}`);
+    channel.appendLine(`Output: ${outputPath}`);
     channel.appendLine('---');
 
     statusBar?.setRunning();
@@ -97,18 +96,38 @@ async function runWorkflow(statusBar?: AutoFlowStatusBar): Promise<void> {
         cancellable: false
     }, () => {
         return new Promise<void>((resolve) => {
-            exec(command, { maxBuffer: 1024 * 1024 * 10 }, (error, stdout, stderr) => {
-                channel.appendLine(stdout);
-                
-                if (stderr) {
-                    channel.appendLine('STDERR:');
-                    channel.appendLine(stderr);
-                }
-                
-                if (error) {
-                    channel.appendLine(`\nError: ${error.message}`);
-                    vscode.window.showErrorMessage(`Workflow failed: ${error.message}`);
-                    statusBar?.setFailed(error.message);
+            const child = spawn('dotnet', [
+                'run',
+                '--project', projectPath,
+                '--',
+                'run',
+                filePath,
+                '--output', outputPath
+            ], {
+                cwd: projectPath,
+                shell: false
+            });
+
+            let stdout = '';
+            let stderr = '';
+
+            child.stdout.on('data', (data) => {
+                const text = data.toString();
+                stdout += text;
+                channel.append(text);
+            });
+
+            child.stderr.on('data', (data) => {
+                const text = data.toString();
+                stderr += text;
+                channel.append(text);
+            });
+
+            child.on('close', (code) => {
+                if (code !== 0) {
+                    channel.appendLine(`\nError: Process exited with code ${code}`);
+                    vscode.window.showErrorMessage(`Workflow failed (exit code ${code})`);
+                    statusBar?.setFailed(`Exit code ${code}`);
                 } else {
                     channel.appendLine('\n✓ Workflow completed successfully');
                     vscode.window.showInformationMessage('Workflow completed successfully!');
@@ -123,6 +142,13 @@ async function runWorkflow(statusBar?: AutoFlowStatusBar): Promise<void> {
                     }
                 }
                 
+                resolve();
+            });
+
+            child.on('error', (error) => {
+                channel.appendLine(`\nError: ${error.message}`);
+                vscode.window.showErrorMessage(`Failed to run workflow: ${error.message}`);
+                statusBar?.setFailed(error.message);
                 resolve();
             });
         });
@@ -148,23 +174,48 @@ async function validateWorkflow(): Promise<void> {
         return;
     }
 
-    const command = `dotnet run --project "${projectPath}" -- validate "${filePath}"`;
-
     vscode.window.withProgress({
         location: vscode.ProgressLocation.Notification,
         title: 'Validating workflow...',
         cancellable: false
     }, () => {
         return new Promise<void>((resolve) => {
-            exec(command, { maxBuffer: 1024 * 1024 }, (error, stdout, stderr) => {
+            const child = spawn('dotnet', [
+                'run',
+                '--project', projectPath,
+                '--',
+                'validate',
+                filePath
+            ], {
+                cwd: projectPath,
+                shell: false
+            });
+
+            let stdout = '';
+            let stderr = '';
+
+            child.stdout.on('data', (data) => {
+                stdout += data.toString();
+            });
+
+            child.stderr.on('data', (data) => {
+                stderr += data.toString();
+            });
+
+            child.on('close', (code) => {
                 const output = stdout + stderr;
                 
-                if (error) {
+                if (code !== 0) {
                     vscode.window.showErrorMessage(`Validation failed:\n${output}`);
                 } else {
                     vscode.window.showInformationMessage('✓ Workflow is valid!');
                 }
                 
+                resolve();
+            });
+
+            child.on('error', (error) => {
+                vscode.window.showErrorMessage(`Failed to validate: ${error.message}`);
                 resolve();
             });
         });
@@ -187,22 +238,31 @@ async function showHistory(): Promise<void> {
         return;
     }
 
-    const statusArg = selectedStatus === 'All' ? '' : `--status ${selectedStatus}`;
-    const command = `dotnet run --project "${projectPath}" -- history ${statusArg}`;
+    const args = ['run', '--project', projectPath, '--', 'history'];
+    if (selectedStatus !== 'All') {
+        args.push('--status', selectedStatus);
+    }
 
     const channel = getOutputChannel();
     channel.show(true);
     channel.appendLine(`Execution History (${selectedStatus}):`);
     channel.appendLine('---');
 
-    exec(command, { maxBuffer: 1024 * 1024 }, (error, stdout, stderr) => {
-        channel.appendLine(stdout);
-        if (stderr) {
-            channel.appendLine(stderr);
-        }
-        if (error) {
-            channel.appendLine(`Error: ${error.message}`);
-        }
+    const child = spawn('dotnet', args, {
+        cwd: projectPath,
+        shell: false
+    });
+
+    child.stdout.on('data', (data) => {
+        channel.append(data.toString());
+    });
+
+    child.stderr.on('data', (data) => {
+        channel.append(data.toString());
+    });
+
+    child.on('error', (error) => {
+        channel.appendLine(`Error: ${error.message}`);
     });
 }
 
@@ -213,18 +273,31 @@ async function listKeywords(): Promise<void> {
         return;
     }
 
-    const command = `dotnet run --project "${projectPath}" -- list-keywords`;
-
     const channel = getOutputChannel();
     channel.show(true);
     channel.appendLine('Available Keywords:');
     channel.appendLine('---');
 
-    exec(command, { maxBuffer: 1024 * 1024 }, (error, stdout, stderr) => {
-        channel.appendLine(stdout);
-        if (stderr) {
-            channel.appendLine(stderr);
-        }
+    const child = spawn('dotnet', [
+        'run',
+        '--project', projectPath,
+        '--',
+        'list-keywords'
+    ], {
+        cwd: projectPath,
+        shell: false
+    });
+
+    child.stdout.on('data', (data) => {
+        channel.append(data.toString());
+    });
+
+    child.stderr.on('data', (data) => {
+        channel.append(data.toString());
+    });
+
+    child.on('error', (error) => {
+        channel.appendLine(`Error: ${error.message}`);
     });
 }
 
@@ -251,20 +324,31 @@ async function showStats(): Promise<void> {
         return;
     }
 
-    const command = `dotnet run --project "${projectPath}" -- stats --days ${days}`;
-
     const channel = getOutputChannel();
     channel.show(true);
     channel.appendLine(`AutoFlow Statistics (last ${days} days):`);
     channel.appendLine('---');
 
-    exec(command, { maxBuffer: 1024 * 1024 }, (error, stdout, stderr) => {
-        channel.appendLine(stdout);
-        if (stderr) {
-            channel.appendLine(stderr);
-        }
-        if (error) {
-            channel.appendLine(`Error: ${error.message}`);
-        }
+    const child = spawn('dotnet', [
+        'run',
+        '--project', projectPath,
+        '--',
+        'stats',
+        '--days', days
+    ], {
+        cwd: projectPath,
+        shell: false
+    });
+
+    child.stdout.on('data', (data) => {
+        channel.append(data.toString());
+    });
+
+    child.stderr.on('data', (data) => {
+        channel.append(data.toString());
+    });
+
+    child.on('error', (error) => {
+        channel.appendLine(`Error: ${error.message}`);
     });
 }
