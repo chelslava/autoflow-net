@@ -200,7 +200,7 @@ public sealed class SQLiteExecutionRepositoryTests : IAsyncLifetime
     public async Task SaveAsync_ShouldStoreStepsJson()
     {
         var result = CreateTestResult("steps-workflow", ExecutionStatus.Passed);
-        result.Steps.Add(new StepExecutionResult
+        result.AddStep(new StepExecutionResult
         {
             StepId = "step-1",
             KeywordName = "log.info",

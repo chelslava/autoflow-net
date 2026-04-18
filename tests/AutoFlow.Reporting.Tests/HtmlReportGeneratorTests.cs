@@ -15,7 +15,7 @@ public sealed class HtmlReportGeneratorTests
     {
         var generator = new HtmlReportGenerator();
         var runResult = CreateTestRunResult(ExecutionStatus.Passed);
-        runResult.Steps.Add(CreateTestStep("step1", "log.info", ExecutionStatus.Passed));
+        runResult.AddStep(CreateTestStep("step1", "log.info", ExecutionStatus.Passed));
         
         var html = generator.Generate(runResult);
         
@@ -32,7 +32,7 @@ public sealed class HtmlReportGeneratorTests
     {
         var generator = new HtmlReportGenerator();
         var runResult = CreateTestRunResult(ExecutionStatus.Failed);
-        runResult.Steps.Add(CreateTestStep("step1", "http.request", ExecutionStatus.Failed, "Connection refused"));
+        runResult.AddStep(CreateTestStep("step1", "http.request", ExecutionStatus.Failed, "Connection refused"));
         
         var html = generator.Generate(runResult);
         
@@ -46,9 +46,9 @@ public sealed class HtmlReportGeneratorTests
     {
         var generator = new HtmlReportGenerator();
         var runResult = CreateTestRunResult(ExecutionStatus.Passed);
-        runResult.Steps.Add(CreateTestStep("step1", "log.info", ExecutionStatus.Passed));
-        runResult.Steps.Add(CreateTestStep("step2", "files.read", ExecutionStatus.Passed));
-        runResult.Steps.Add(CreateTestStep("step3", "http.request", ExecutionStatus.Failed, "Timeout"));
+        runResult.AddStep(CreateTestStep("step1", "log.info", ExecutionStatus.Passed));
+        runResult.AddStep(CreateTestStep("step2", "files.read", ExecutionStatus.Passed));
+        runResult.AddStep(CreateTestStep("step3", "http.request", ExecutionStatus.Failed, "Timeout"));
         
         var html = generator.Generate(runResult);
         
@@ -65,7 +65,7 @@ public sealed class HtmlReportGeneratorTests
     {
         var generator = new HtmlReportGenerator();
         var runResult = CreateTestRunResult(ExecutionStatus.Passed);
-        runResult.Steps.Add(CreateTestStep("step1", "log.info", ExecutionStatus.Skipped));
+        runResult.AddStep(CreateTestStep("step1", "log.info", ExecutionStatus.Skipped));
         
         var html = generator.Generate(runResult);
         
@@ -79,7 +79,7 @@ public sealed class HtmlReportGeneratorTests
         var runResult = CreateTestRunResult(ExecutionStatus.Passed);
         var step = CreateTestStep("step1", "files.read", ExecutionStatus.Passed);
         step.Outputs = new Dictionary<string, object?> { ["content"] = "test content" };
-        runResult.Steps.Add(step);
+        runResult.AddStep(step);
         
         var html = generator.Generate(runResult);
         
@@ -94,7 +94,7 @@ public sealed class HtmlReportGeneratorTests
         var step = CreateTestStep("step1", "log.info", ExecutionStatus.Passed);
         step.Logs.Add("Starting operation");
         step.Logs.Add("Operation completed");
-        runResult.Steps.Add(step);
+        runResult.AddStep(step);
         
         var html = generator.Generate(runResult);
         
@@ -112,7 +112,7 @@ public sealed class HtmlReportGeneratorTests
         var runResult = CreateTestRunResult(ExecutionStatus.Passed);
         var step = CreateTestStep("step1", "http.request", ExecutionStatus.Passed);
         step.Outputs = new Dictionary<string, object?> { ["token"] = "secret_value" };
-        runResult.Steps.Add(step);
+        runResult.AddStep(step);
         
         var html = generator.Generate(runResult);
         
@@ -128,7 +128,7 @@ public sealed class HtmlReportGeneratorTests
         
         var generator = new HtmlReportGenerator(masker);
         var runResult = CreateTestRunResult(ExecutionStatus.Failed);
-        runResult.Steps.Add(CreateTestStep("step1", "http.request", ExecutionStatus.Failed, "Auth failed: my_secret_password"));
+        runResult.AddStep(CreateTestStep("step1", "http.request", ExecutionStatus.Failed, "Auth failed: my_secret_password"));
         
         var html = generator.Generate(runResult);
         
@@ -141,10 +141,10 @@ public sealed class HtmlReportGeneratorTests
     {
         var generator = new HtmlReportGenerator();
         var runResult = CreateTestRunResult(ExecutionStatus.Passed);
-        runResult.Steps.Add(CreateTestStep("step1", "log.info", ExecutionStatus.Passed));
-        runResult.Steps.Add(CreateTestStep("step2", "log.info", ExecutionStatus.Passed));
-        runResult.Steps.Add(CreateTestStep("step3", "log.info", ExecutionStatus.Failed, "Error"));
-        runResult.Steps.Add(CreateTestStep("step4", "log.info", ExecutionStatus.Skipped));
+        runResult.AddStep(CreateTestStep("step1", "log.info", ExecutionStatus.Passed));
+        runResult.AddStep(CreateTestStep("step2", "log.info", ExecutionStatus.Passed));
+        runResult.AddStep(CreateTestStep("step3", "log.info", ExecutionStatus.Failed, "Error"));
+        runResult.AddStep(CreateTestStep("step4", "log.info", ExecutionStatus.Skipped));
         
         var html = generator.Generate(runResult);
         
@@ -159,7 +159,7 @@ public sealed class HtmlReportGeneratorTests
     {
         var generator = new HtmlReportGenerator();
         var runResult = CreateTestRunResult(ExecutionStatus.Passed);
-        runResult.Steps.Add(CreateTestStep("step1", "log.info", ExecutionStatus.Passed));
+        runResult.AddStep(CreateTestStep("step1", "log.info", ExecutionStatus.Passed));
         
         var html = generator.Generate(runResult);
         
@@ -171,7 +171,7 @@ public sealed class HtmlReportGeneratorTests
     {
         var generator = new HtmlReportGenerator();
         var runResult = CreateTestRunResult(ExecutionStatus.Passed);
-        runResult.Steps.Add(CreateTestStep("step1", "log.info", ExecutionStatus.Passed));
+        runResult.AddStep(CreateTestStep("step1", "log.info", ExecutionStatus.Passed));
         
         var html = generator.Generate(runResult);
         

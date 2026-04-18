@@ -1,5 +1,6 @@
 // Этот код нужен для динамического вызова keyword-обработчиков с типизированными аргументами.
 using System;
+using System.Collections.Concurrent;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
@@ -14,6 +15,7 @@ public sealed class KeywordExecutor
     private readonly IServiceProvider _serviceProvider;
     private readonly KeywordRegistry _registry;
     private readonly JsonSerializerOptions _jsonOptions;
+    private readonly ConcurrentDictionary<Type, System.Reflection.MethodInfo?> _methodCache = new();
 
     public KeywordExecutor(
         IServiceProvider serviceProvider,
@@ -76,16 +78,16 @@ public sealed class KeywordExecutor
         }
         catch (Exception ex) when (ex is not null)
         {
-            var argsPreview = rawArgs is null 
-                ? "null" 
-                : JsonSerializer.Serialize(rawArgs, new JsonSerializerOptions { WriteIndented = false });
+            var maskedArgs = MaskSensitiveData(rawArgs);
             return KeywordResult.Failure(
                 $"Failed to bind arguments for keyword '{keywordName}' in step '{stepId}': {ex.Message}. " +
                 $"Args type expected: {registration.ArgsType.Name}. " +
-                $"Raw args: {argsPreview}");
+                $"Raw args: {maskedArgs}");
         }
 
-        var method = registration.HandlerType.GetMethod("ExecuteAsync");
+        var method = _methodCache.GetOrAdd(registration.HandlerType, 
+            t => t.GetMethod("ExecuteAsync"));
+            
         if (method is null)
             return KeywordResult.Failure(
                 $"Handler '{registration.HandlerType.Name}' for keyword '{keywordName}' is missing ExecuteAsync method. " +
@@ -123,9 +125,25 @@ public sealed class KeywordExecutor
         if (argsType.IsInstanceOfType(rawArgs))
             return rawArgs;
 
-        var json = JsonSerializer.Serialize(rawArgs, _jsonOptions);
-        var result = JsonSerializer.Deserialize(json, argsType, _jsonOptions);
+        using var jsonDoc = JsonSerializer.SerializeToDocument(rawArgs, _jsonOptions);
+        var result = jsonDoc.Deserialize(argsType, _jsonOptions);
 
         return result ?? throw new InvalidOperationException($"Failed to deserialize to '{argsType.Name}'");
+    }
+    
+    private static string MaskSensitiveData(object? data)
+    {
+        if (data is null)
+            return "null";
+            
+        var json = JsonSerializer.Serialize(data, new JsonSerializerOptions { WriteIndented = false });
+        
+        var masked = System.Text.RegularExpressions.Regex.Replace(
+            json,
+            @"""(password|token|secret|api[_-]?key|auth[_-]?token|credential)""\s*:\s*""[^""]*""",
+            @"""$1"":""***""",
+            System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+            
+        return masked;
     }
 }

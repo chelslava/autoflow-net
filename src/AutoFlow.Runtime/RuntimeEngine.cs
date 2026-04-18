@@ -377,7 +377,7 @@ public sealed class RuntimeEngine : IRuntimeEngine
         }
 
         stepResult.FinishedAtUtc = DateTimeOffset.UtcNow;
-        runResult.Steps.Add(stepResult);
+        runResult.AddStep(stepResult);
     }
 
     private bool ShouldRetry(Exception ex, RetryNode? retry)
@@ -570,7 +570,7 @@ public sealed class RuntimeEngine : IRuntimeEngine
         {
             runResult.Status = ExecutionStatus.Failed;
 
-            runResult.Steps.Add(new StepExecutionResult
+            runResult.AddStep(new StepExecutionResult
             {
                 StepId = call.Id,
                 KeywordName = $"call:{call.Task}",

@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Net;
 using System.Net.Http;
+using System.Net.Sockets;
 using System.Text;
 using System.Text.Json;
 using System.Threading;
@@ -176,9 +177,29 @@ public sealed class HttpRequestKeyword : IKeywordHandler<HttpRequestArgs>
                 return true;
             }
             
+            try
+            {
+                var addresses = Dns.GetHostAddresses(host);
+                foreach (var addr in addresses)
+                {
+                    if (IsPrivateIPAddress(addr))
+                        return true;
+                }
+            }
+            catch (SocketException)
+            {
+                // DNS resolution failed, allow the request to proceed
+                // The actual connection will fail if host is unreachable
+            }
+            
             return false;
         }
 
+        return IsPrivateIPAddress(ip);
+    }
+
+    private static bool IsPrivateIPAddress(IPAddress ip)
+    {
         var bytes = ip.GetAddressBytes();
 
         if (bytes.Length == 4)

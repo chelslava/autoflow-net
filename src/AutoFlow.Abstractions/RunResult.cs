@@ -8,6 +8,9 @@ namespace AutoFlow.Abstractions;
 /// </summary>
 public sealed class RunResult
 {
+    private readonly List<StepExecutionResult> _steps = [];
+    private readonly object _stepsLock = new();
+
     /// <summary>
     /// Schema version for the result format.
     /// </summary>
@@ -35,8 +38,30 @@ public sealed class RunResult
 
     /// <summary>
     /// Results of all executed steps.
+    /// Thread-safe for parallel execution scenarios.
     /// </summary>
-    public List<StepExecutionResult> Steps { get; } = [];
+    public List<StepExecutionResult> Steps
+    {
+        get
+        {
+            lock (_stepsLock)
+            {
+                return [.. _steps];
+            }
+        }
+    }
+
+    /// <summary>
+    /// Adds a step result in a thread-safe manner.
+    /// </summary>
+    /// <param name="step">The step result to add.</param>
+    public void AddStep(StepExecutionResult step)
+    {
+        lock (_stepsLock)
+        {
+            _steps.Add(step);
+        }
+    }
 
     /// <summary>
     /// Total execution duration.

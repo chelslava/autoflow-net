@@ -67,6 +67,7 @@ public sealed class RuntimeEngineTests
 
         Assert.Equal(ExecutionStatus.Passed, result.Status);
         Assert.Single(result.Steps);
-        Assert.Equal("log_start", result.Steps[0].StepId);
+        var steps = result.Steps;
+        Assert.Equal("log_start", steps[0].StepId);
     }
 }
