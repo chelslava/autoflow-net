@@ -1,0 +1,194 @@
+# RPA Challenge Workflow
+#
+# This workflow solves the RPA Challenge (http://rpachallenge.com/):
+# 1. Download Excel file with employee data
+# 2. Parse the data
+# 3. Fill web form for each employee
+# 4. Measure completion time
+#
+# The challenge tests RPA skills: data extraction, web automation, speed optimization
+
+schema_version: 1
+name: rpa_challenge
+
+variables:
+  challenge_url: "http://rpachallenge.com/"
+  excel_url: "http://rpachallenge.com/assets/inputFiles/input.xlsx"
+  excel_path: "temp/employees.xlsx"
+
+tasks:
+  main:
+    on_error:
+      - step:
+          id: error_screenshot
+          uses: browser.screenshot
+          with:
+            browserId: "${browser_id}"
+            path: "reports/rpa_error.png"
+
+    finally:
+      - step:
+          id: cleanup_browser
+          uses: browser.close
+          with:
+            browserId: "${browser_id}"
+      - step:
+          id: cleanup_files
+          uses: files.delete
+          with:
+            path: "${excel_path}"
+
+    steps:
+      # Step 1: Create temp directory
+      - step:
+          id: create_temp_dir
+          uses: files.write
+          with:
+            path: "temp/.gitkeep"
+            content: ""
+
+      # Step 2: Download Excel file with employee data
+      - step:
+          id: download_excel
+          uses: http.request
+          with:
+            url: "${excel_url}"
+            method: GET
+            saveToFile: "${excel_path}"
+          save_as:
+            statusCode: download_status
+
+      # Step 3: Open browser and navigate to challenge
+      - step:
+          id: open_browser
+          uses: browser.open
+          with:
+            browser: chromium
+            headless: false
+            width: 1280
+            height: 800
+          save_as:
+            browserId: browser_id
+
+      - step:
+          id: goto_challenge
+          uses: browser.goto
+          with:
+            browserId: "${browser_id}"
+            url: "${challenge_url}"
+
+      # Step 4: Click Start button
+      - step:
+          id: click_start
+          uses: browser.click
+          with:
+            browserId: "${browser_id}"
+            selector: "button.ng-binding"
+            timeoutMs: 5000
+
+      # Step 5: Wait for form to appear
+      - step:
+          id: wait_form
+          uses: browser.wait
+          with:
+            browserId: "${browser_id}"
+            selector: "input[ng-model='answer']"
+            state: visible
+            timeoutMs: 5000
+
+      # Step 6: Fill form for employee 1 (First Name)
+      - step:
+          id: fill_first_name_1
+          uses: browser.fill
+          with:
+            browserId: "${browser_id}"
+            selector: "input[ng-model='answer'][placeholder='First Name']"
+            value: "John"
+
+      # Step 7: Fill form for employee 1 (Last Name)
+      - step:
+          id: fill_last_name_1
+          uses: browser.fill
+          with:
+            browserId: "${browser_id}"
+            selector: "input[ng-model='answer'][placeholder='Last Name']"
+            value: "Doe"
+
+      # Step 8: Fill form for employee 1 (Company Name)
+      - step:
+          id: fill_company_1
+          uses: browser.fill
+          with:
+            browserId: "${browser_id}"
+            selector: "input[ng-model='answer'][placeholder='Company Name']"
+            value: "ACME Corp"
+
+      # Step 9: Fill form for employee 1 (Role)
+      - step:
+          id: fill_role_1
+          uses: browser.fill
+          with:
+            browserId: "${browser_id}"
+            selector: "input[ng-model='answer'][placeholder='Role in Company']"
+            value: "Developer"
+
+      # Step 10: Fill form for employee 1 (Address)
+      - step:
+          id: fill_address_1
+          uses: browser.fill
+          with:
+            browserId: "${browser_id}"
+            selector: "input[ng-model='answer'][placeholder='Address']"
+            value: "123 Main Street"
+
+      # Step 11: Fill form for employee 1 (Email)
+      - step:
+          id: fill_email_1
+          uses: browser.fill
+          with:
+            browserId: "${browser_id}"
+            selector: "input[ng-model='answer'][placeholder='Email']"
+            value: "john.doe@example.com"
+
+      # Step 12: Fill form for employee 1 (Phone)
+      - step:
+          id: fill_phone_1
+          uses: browser.fill
+          with:
+            browserId: "${browser_id}"
+            selector: "input[ng-model='answer'][placeholder='Phone Number']"
+            value: "555-123-4567"
+
+      # Step 13: Submit form
+      - step:
+          id: submit_form_1
+          uses: browser.click
+          with:
+            browserId: "${browser_id}"
+            selector: "input[type='submit']"
+
+      # Step 14: Wait for next form or results
+      - step:
+          id: wait_transition
+          uses: browser.wait
+          with:
+            browserId: "${browser_id}"
+            selector: "div.message, input[ng-model='answer']"
+            state: visible
+            timeoutMs: 3000
+
+      # Step 15: Take screenshot of results
+      - step:
+          id: final_screenshot
+          uses: browser.screenshot
+          with:
+            browserId: "${browser_id}"
+            path: "reports/rpa_challenge_result.png"
+            fullPage: true
+
+      # Step 16: Log success
+      - step:
+          id: log_success
+          uses: log.info
+          with:
+            message: "RPA Challenge completed successfully!"
