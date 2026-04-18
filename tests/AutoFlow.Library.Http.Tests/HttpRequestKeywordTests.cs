@@ -5,6 +5,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using AutoFlow.Abstractions;
 using AutoFlow.Library.Http;
+using AutoFlow.Runtime.Resilience;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Moq.Protected;
@@ -18,6 +19,7 @@ public sealed class HttpRequestKeywordTests
     private readonly HttpClient _httpClient;
     private readonly Mock<ILogger> _loggerMock;
     private readonly Mock<IExecutionContext> _executionContextMock;
+    private readonly CircuitBreaker _circuitBreaker;
 
     public HttpRequestKeywordTests()
     {
@@ -25,6 +27,7 @@ public sealed class HttpRequestKeywordTests
         _httpClient = new HttpClient(_messageHandlerMock.Object);
         _loggerMock = new Mock<ILogger>();
         _executionContextMock = new Mock<IExecutionContext>();
+        _circuitBreaker = new CircuitBreaker();
     }
 
     private KeywordContext CreateContext()
@@ -43,7 +46,7 @@ public sealed class HttpRequestKeywordTests
     {
         SetupHttpResponse(HttpStatusCode.OK, "{\"result\": \"ok\"}");
 
-        var keyword = new HttpRequestKeyword(_httpClient);
+        var keyword = new HttpRequestKeyword(_httpClient, _circuitBreaker);
         var args = new HttpRequestArgs
         {
             Url = "https://api.example.com/test",
@@ -59,7 +62,7 @@ public sealed class HttpRequestKeywordTests
     [Fact]
     public async Task ExecuteAsync_EmptyUrl_ReturnsFailure()
     {
-        var keyword = new HttpRequestKeyword(_httpClient);
+        var keyword = new HttpRequestKeyword(_httpClient, _circuitBreaker);
         var args = new HttpRequestArgs
         {
             Url = "",
@@ -75,7 +78,7 @@ public sealed class HttpRequestKeywordTests
     [Fact]
     public async Task ExecuteAsync_InvalidUrlFormat_ReturnsFailure()
     {
-        var keyword = new HttpRequestKeyword(_httpClient);
+        var keyword = new HttpRequestKeyword(_httpClient, _circuitBreaker);
         var args = new HttpRequestArgs
         {
             Url = "not-a-valid-url",
@@ -91,7 +94,7 @@ public sealed class HttpRequestKeywordTests
     [Fact]
     public async Task ExecuteAsync_FileScheme_ReturnsFailure()
     {
-        var keyword = new HttpRequestKeyword(_httpClient);
+        var keyword = new HttpRequestKeyword(_httpClient, _circuitBreaker);
         var args = new HttpRequestArgs
         {
             Url = "file:///etc/passwd",
@@ -108,7 +111,7 @@ public sealed class HttpRequestKeywordTests
     [Fact]
     public async Task ExecuteAsync_FtpScheme_ReturnsFailure()
     {
-        var keyword = new HttpRequestKeyword(_httpClient);
+        var keyword = new HttpRequestKeyword(_httpClient, _circuitBreaker);
         var args = new HttpRequestArgs
         {
             Url = "ftp://ftp.example.com/file.txt",
@@ -124,7 +127,7 @@ public sealed class HttpRequestKeywordTests
     [Fact]
     public async Task ExecuteAsync_JavaScriptScheme_ReturnsFailure()
     {
-        var keyword = new HttpRequestKeyword(_httpClient);
+        var keyword = new HttpRequestKeyword(_httpClient, _circuitBreaker);
         var args = new HttpRequestArgs
         {
             Url = "javascript:alert('xss')",
@@ -139,7 +142,7 @@ public sealed class HttpRequestKeywordTests
     [Fact]
     public async Task ExecuteAsync_Localhost_ReturnsFailure()
     {
-        var keyword = new HttpRequestKeyword(_httpClient);
+        var keyword = new HttpRequestKeyword(_httpClient, _circuitBreaker);
         var args = new HttpRequestArgs
         {
             Url = "http://localhost/admin",
@@ -156,7 +159,7 @@ public sealed class HttpRequestKeywordTests
     [Fact]
     public async Task ExecuteAsync_LocalhostWithPort_ReturnsFailure()
     {
-        var keyword = new HttpRequestKeyword(_httpClient);
+        var keyword = new HttpRequestKeyword(_httpClient, _circuitBreaker);
         var args = new HttpRequestArgs
         {
             Url = "http://localhost:8080/api",
@@ -171,7 +174,7 @@ public sealed class HttpRequestKeywordTests
     [Fact]
     public async Task ExecuteAsync_LocalhostIP_ReturnsFailure()
     {
-        var keyword = new HttpRequestKeyword(_httpClient);
+        var keyword = new HttpRequestKeyword(_httpClient, _circuitBreaker);
         var args = new HttpRequestArgs
         {
             Url = "http://127.0.0.1/admin",
@@ -187,7 +190,7 @@ public sealed class HttpRequestKeywordTests
     [Fact]
     public async Task ExecuteAsync_PrivateIPv4_10Range_ReturnsFailure()
     {
-        var keyword = new HttpRequestKeyword(_httpClient);
+        var keyword = new HttpRequestKeyword(_httpClient, _circuitBreaker);
         var args = new HttpRequestArgs
         {
             Url = "http://10.0.0.1/internal",
@@ -202,7 +205,7 @@ public sealed class HttpRequestKeywordTests
     [Fact]
     public async Task ExecuteAsync_PrivateIPv4_172Range_ReturnsFailure()
     {
-        var keyword = new HttpRequestKeyword(_httpClient);
+        var keyword = new HttpRequestKeyword(_httpClient, _circuitBreaker);
         var args = new HttpRequestArgs
         {
             Url = "http://172.16.0.1/internal",
@@ -217,7 +220,7 @@ public sealed class HttpRequestKeywordTests
     [Fact]
     public async Task ExecuteAsync_PrivateIPv4_192Range_ReturnsFailure()
     {
-        var keyword = new HttpRequestKeyword(_httpClient);
+        var keyword = new HttpRequestKeyword(_httpClient, _circuitBreaker);
         var args = new HttpRequestArgs
         {
             Url = "http://192.168.1.1/internal",
@@ -232,7 +235,7 @@ public sealed class HttpRequestKeywordTests
     [Fact]
     public async Task ExecuteAsync_LocalDomain_ReturnsFailure()
     {
-        var keyword = new HttpRequestKeyword(_httpClient);
+        var keyword = new HttpRequestKeyword(_httpClient, _circuitBreaker);
         var args = new HttpRequestArgs
         {
             Url = "http://test.local/api",
@@ -247,7 +250,7 @@ public sealed class HttpRequestKeywordTests
     [Fact]
     public async Task ExecuteAsync_InternalDomain_ReturnsFailure()
     {
-        var keyword = new HttpRequestKeyword(_httpClient);
+        var keyword = new HttpRequestKeyword(_httpClient, _circuitBreaker);
         var args = new HttpRequestArgs
         {
             Url = "http://service.internal/api",
@@ -264,7 +267,7 @@ public sealed class HttpRequestKeywordTests
     {
         SetupHttpResponse(HttpStatusCode.OK, "{\"result\": \"ok\"}");
 
-        var keyword = new HttpRequestKeyword(_httpClient);
+        var keyword = new HttpRequestKeyword(_httpClient, _circuitBreaker);
         var args = new HttpRequestArgs
         {
             Url = "http://localhost/test",
@@ -282,7 +285,7 @@ public sealed class HttpRequestKeywordTests
     {
         SetupHttpResponse(HttpStatusCode.OK, "{\"result\": \"ok\"}");
 
-        var keyword = new HttpRequestKeyword(_httpClient);
+        var keyword = new HttpRequestKeyword(_httpClient, _circuitBreaker);
         var args = new HttpRequestArgs
         {
             Url = "http://192.168.1.1/api",
@@ -301,7 +304,7 @@ public sealed class HttpRequestKeywordTests
         HttpRequestMessage? capturedRequest = null;
         SetupHttpResponse(HttpStatusCode.OK, "{\"id\": 1}", capture => capturedRequest = capture);
 
-        var keyword = new HttpRequestKeyword(_httpClient);
+        var keyword = new HttpRequestKeyword(_httpClient, _circuitBreaker);
         var args = new HttpRequestArgs
         {
             Url = "https://api.example.com/users",
@@ -323,7 +326,7 @@ public sealed class HttpRequestKeywordTests
         HttpRequestMessage? capturedRequest = null;
         SetupHttpResponse(HttpStatusCode.OK, "{}", capture => capturedRequest = capture);
 
-        var keyword = new HttpRequestKeyword(_httpClient);
+        var keyword = new HttpRequestKeyword(_httpClient, _circuitBreaker);
         var args = new HttpRequestArgs
         {
             Url = "https://api.example.com/test",
@@ -348,7 +351,7 @@ public sealed class HttpRequestKeywordTests
     {
         SetupHttpResponse(HttpStatusCode.NotFound, "{\"error\": \"Not found\"}");
 
-        var keyword = new HttpRequestKeyword(_httpClient);
+        var keyword = new HttpRequestKeyword(_httpClient, _circuitBreaker);
         var args = new HttpRequestArgs
         {
             Url = "https://api.example.com/nonexistent",
@@ -366,7 +369,7 @@ public sealed class HttpRequestKeywordTests
     {
         SetupHttpResponse(HttpStatusCode.InternalServerError, "Internal Server Error");
 
-        var keyword = new HttpRequestKeyword(_httpClient);
+        var keyword = new HttpRequestKeyword(_httpClient, _circuitBreaker);
         var args = new HttpRequestArgs
         {
             Url = "https://api.example.com/error",

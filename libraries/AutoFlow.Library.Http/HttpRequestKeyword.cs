@@ -9,6 +9,7 @@ using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using AutoFlow.Abstractions;
+using AutoFlow.Runtime.Resilience;
 using Microsoft.Extensions.Logging;
 
 namespace AutoFlow.Library.Http;
@@ -24,19 +25,24 @@ public sealed class HttpRequestArgs
     public long? MaxResponseSizeBytes { get; set; }
     public bool LogResponseBody { get; set; }
     public int MaxLogBodyLength { get; set; } = 1024;
+    public bool EnableCircuitBreaker { get; set; }
+    public int CircuitBreakerFailureThreshold { get; set; } = 5;
+    public int CircuitBreakerResetSeconds { get; set; } = 30;
 }
 
 [Keyword("http.request", Category = "HTTP", Description = "Executes an HTTP request.")]
 public sealed class HttpRequestKeyword : IKeywordHandler<HttpRequestArgs>
 {
     private static readonly string[] AllowedSchemes = { "http", "https" };
-    private const long DefaultMaxResponseSize = 50 * 1024 * 1024; // 50 MB
+    private const long DefaultMaxResponseSize = 50 * 1024 * 1024;
     
     private readonly HttpClient _httpClient;
+    private readonly CircuitBreaker _circuitBreaker;
 
-    public HttpRequestKeyword(HttpClient httpClient)
+    public HttpRequestKeyword(HttpClient httpClient, CircuitBreaker circuitBreaker)
     {
         _httpClient = httpClient;
+        _circuitBreaker = circuitBreaker;
     }
 
     public async Task<KeywordResult> ExecuteAsync(
@@ -52,6 +58,20 @@ public sealed class HttpRequestKeyword : IKeywordHandler<HttpRequestArgs>
         {
             context.Logger.LogWarning("URL validation failed: {Error}", errorMessage);
             return KeywordResult.Failure(errorMessage!);
+        }
+
+        var host = new Uri(url).Host;
+        
+        if (args.EnableCircuitBreaker)
+        {
+            UpdateCircuitBreakerOptions(args);
+            
+            if (!_circuitBreaker.CanExecute(host))
+            {
+                var state = _circuitBreaker.GetState(host);
+                context.Logger.LogWarning("Circuit breaker is {State} for host {Host}", state, host);
+                return KeywordResult.Failure($"Circuit breaker is {state} for host '{host}'. Service unavailable.");
+            }
         }
 
         using var request = new HttpRequestMessage(
@@ -86,7 +106,19 @@ public sealed class HttpRequestKeyword : IKeywordHandler<HttpRequestArgs>
 
         var effectiveToken = linkedCts?.Token ?? cancellationToken;
 
-        var response = await _httpClient.SendAsync(request, effectiveToken).ConfigureAwait(false);
+        HttpResponseMessage response;
+        try
+        {
+            response = await _httpClient.SendAsync(request, effectiveToken).ConfigureAwait(false);
+        }
+        catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException)
+        {
+            if (args.EnableCircuitBreaker)
+            {
+                _circuitBreaker.RecordFailure(host);
+            }
+            throw;
+        }
 
         var maxResponseSize = args.MaxResponseSizeBytes ?? DefaultMaxResponseSize;
         string responseBody;
@@ -102,6 +134,18 @@ public sealed class HttpRequestKeyword : IKeywordHandler<HttpRequestArgs>
             using var limitedStream = new LimitedStream(stream, maxResponseSize);
             using var reader = new StreamReader(limitedStream, Encoding.UTF8);
             responseBody = await reader.ReadToEndAsync(effectiveToken).ConfigureAwait(false);
+        }
+
+        if (args.EnableCircuitBreaker)
+        {
+            if (response.IsSuccessStatusCode)
+            {
+                _circuitBreaker.RecordSuccess(host);
+            }
+            else if ((int)response.StatusCode >= 500)
+            {
+                _circuitBreaker.RecordFailure(host);
+            }
         }
 
         var result = new
@@ -134,6 +178,16 @@ public sealed class HttpRequestKeyword : IKeywordHandler<HttpRequestArgs>
         return response.IsSuccessStatusCode
             ? KeywordResult.Success(result, logs)
             : KeywordResult.Failure($"HTTP {response.StatusCode}: {responseBody}", logs);
+    }
+
+    private void UpdateCircuitBreakerOptions(HttpRequestArgs args)
+    {
+        var options = new CircuitBreakerOptions
+        {
+            FailureThreshold = args.CircuitBreakerFailureThreshold,
+            ResetTimeoutSeconds = args.CircuitBreakerResetSeconds
+        };
+        _circuitBreaker.UpdateOptions(options);
     }
 
     private static (bool IsValid, string? ErrorMessage) ValidateUrl(string url, bool allowPrivateNetworks)

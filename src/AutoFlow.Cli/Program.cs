@@ -13,6 +13,7 @@ using AutoFlow.Library.Http;
 using AutoFlow.Parser;
 using AutoFlow.Reporting;
 using AutoFlow.Runtime;
+using AutoFlow.Runtime.Resilience;
 using AutoFlow.Runtime.Secrets;
 using AutoFlow.Validation;
 using Microsoft.Extensions.DependencyInjection;
@@ -35,6 +36,7 @@ builder.Services.AddSingleton<IWorkflowParser, YamlWorkflowParser>();
 builder.Services.AddSingleton<WorkflowLoader>();
 builder.Services.AddSingleton<JsonReportGenerator>();
 builder.Services.AddSingleton<HtmlReportGenerator>();
+builder.Services.AddSingleton<CircuitBreaker>();
 builder.Services.AddHttpClient<HttpRequestKeyword>()
     .ConfigurePrimaryHttpMessageHandler(() => new SocketsHttpHandler
     {
