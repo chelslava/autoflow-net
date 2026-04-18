@@ -845,7 +845,7 @@ static void GenerateStepsGraph(List<IWorkflowNode> steps, string parent)
                     GenerateStepsGraph(ifNode.ElseSteps, $"{nodeId}_else");
                 break;
             case ParallelNode parallel:
-                Console.WriteLine($"            {nodeId}[/\"parallel x{parallel.Steps.Count}\"\]");
+                Console.WriteLine($"            {nodeId}[/\"parallel x{parallel.Steps.Count}\"\\]");
                 break;
             case ForEachNode forEach:
                 Console.WriteLine($"            {nodeId}([\"for each: {forEach.As}\"])");
