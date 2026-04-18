@@ -102,6 +102,7 @@ export class AutoFlowTreeDataProvider implements vscode.TreeDataProvider<TreeIte
             item.contextValue = 'step';
             item.line = step.line;
             item.keyword = step.keyword;
+            item.stepId = step.id;
             item.command = {
                 command: 'autoflow.gotoLine',
                 title: 'Go to Step',
@@ -228,6 +229,7 @@ class TreeItem extends vscode.TreeItem {
     children?: Map<string, string>;
     line?: number;
     keyword?: string;
+    stepId?: string;
 
     constructor(label: string, collapsibleState: vscode.TreeItemCollapsibleState) {
         super(label, collapsibleState);

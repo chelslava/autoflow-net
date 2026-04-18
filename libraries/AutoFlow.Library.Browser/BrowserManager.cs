@@ -35,6 +35,8 @@ public sealed class BrowserManager : IAsyncDisposable
         int? width = null,
         int? height = null,
         bool slowMo = false,
+        bool disableJavaScript = false,
+        bool ignoreHTTPSErrors = false,
         CancellationToken cancellationToken = default)
     {
         ObjectDisposedException.ThrowIf(_disposed, this);
@@ -74,7 +76,9 @@ public sealed class BrowserManager : IAsyncDisposable
 
         var page = await browser.NewPageAsync(new BrowserNewPageOptions
         {
-            ViewportSize = viewport
+            ViewportSize = viewport,
+            JavaScriptEnabled = !disableJavaScript,
+            IgnoreHTTPSErrors = ignoreHTTPSErrors
         }).ConfigureAwait(false);
 
         var browserId = Guid.NewGuid().ToString("N")[..8];

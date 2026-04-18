@@ -112,11 +112,31 @@ public sealed class RuntimeEngine : IRuntimeEngine
             // Выполняем main task с поддержкой on_error/finally
             await ExecuteTaskWithHandlers(mainTask, document, context, runResult, workflowContext, cancellationToken).ConfigureAwait(false);
         }
-        catch (Exception ex) when (ex is not null)
+        catch (InvalidOperationException ex)
         {
             runResult.Status = ExecutionStatus.Failed;
-
-            _logger.LogError(ex, "Workflow {WorkflowName} failed (RunId: {RunId}) - {Duration}ms",
+            _logger.LogError(ex, "Workflow {WorkflowName} configuration error (RunId: {RunId})",
+                document.Name, runId);
+            await _hookRunner.OnErrorAsync(workflowContext, ex).ConfigureAwait(false);
+        }
+        catch (ArgumentException ex)
+        {
+            runResult.Status = ExecutionStatus.Failed;
+            _logger.LogError(ex, "Workflow {WorkflowName} argument error (RunId: {RunId})",
+                document.Name, runId);
+            await _hookRunner.OnErrorAsync(workflowContext, ex).ConfigureAwait(false);
+        }
+        catch (OperationCanceledException ex)
+        {
+            runResult.Status = ExecutionStatus.Failed;
+            _logger.LogWarning("Workflow {WorkflowName} cancelled (RunId: {RunId})",
+                document.Name, runId);
+            await _hookRunner.OnErrorAsync(workflowContext, ex).ConfigureAwait(false);
+        }
+        catch (Exception ex)
+        {
+            runResult.Status = ExecutionStatus.Failed;
+            _logger.LogError(ex, "Workflow {WorkflowName} unexpected error (RunId: {RunId}) - {Duration}ms",
                 document.Name, runId, (long)(DateTimeOffset.UtcNow - startedAt).TotalMilliseconds);
             await _hookRunner.OnErrorAsync(workflowContext, ex).ConfigureAwait(false);
         }
@@ -155,7 +175,12 @@ public sealed class RuntimeEngine : IRuntimeEngine
         {
             await ExecuteNodes(task.Steps, document, context, runResult, workflowContext, cancellationToken).ConfigureAwait(false);
         }
-        catch (Exception ex) when (ex is not null)
+        catch (OperationCanceledException)
+        {
+            _logger.LogWarning("Task execution cancelled");
+            throw;
+        }
+        catch (Exception ex)
         {
             taskException = ex;
             runResult.Status = ExecutionStatus.Failed;

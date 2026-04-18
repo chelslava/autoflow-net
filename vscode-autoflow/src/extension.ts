@@ -65,6 +65,56 @@ export function activate(context: vscode.ExtensionContext) {
     );
 
     registerCommands(context, statusBar);
+    
+    context.subscriptions.push(
+        vscode.commands.registerCommand('autoflow.copyStepRef', (item) => {
+            if (item?.stepId) {
+                vscode.env.clipboard.writeText(`\${steps.${item.stepId}.outputs}`);
+                vscode.window.showInformationMessage(`Copied: \${steps.${item.stepId}.outputs}`);
+            }
+        })
+    );
+    
+    context.subscriptions.push(
+        vscode.commands.registerCommand('autoflow.runFromStep', (item) => {
+            vscode.window.showInformationMessage('Run from step requires workflow modification. Use the run command to execute the full workflow.');
+        })
+    );
+    
+    context.subscriptions.push(
+        vscode.commands.registerCommand('autoflow.newWorkflow', async () => {
+            const templates = ['basic', 'http', 'browser', 'parallel', 'files'];
+            const selected = await vscode.window.showQuickPick(templates, {
+                placeHolder: 'Select workflow template'
+            });
+            
+            if (!selected) return;
+            
+            const name = await vscode.window.showInputBox({
+                prompt: 'Workflow name',
+                value: 'my_workflow'
+            });
+            
+            if (!name) return;
+            
+            const fileName = name.endsWith('.yaml') ? name : `${name}.yaml`;
+            const content = getTemplateContent(selected);
+            
+            const workspaceFolder = vscode.workspace.workspaceFolders?.[0];
+            if (!workspaceFolder) {
+                vscode.window.showErrorMessage('No workspace folder open');
+                return;
+            }
+            
+            const filePath = vscode.Uri.joinPath(workspaceFolder.uri, fileName);
+            await vscode.workspace.fs.writeFile(filePath, Buffer.from(content, 'utf-8'));
+            
+            const doc = await vscode.workspace.openTextDocument(filePath);
+            await vscode.window.showTextDocument(doc);
+            
+            vscode.window.showInformationMessage(`Created: ${fileName}`);
+        })
+    );
 }
 
 function isAutoFlowDocument(doc: vscode.TextDocument): boolean {
@@ -155,6 +205,111 @@ function registerProviders(context: vscode.ExtensionContext) {
     if (vscode.window.activeTextEditor && isAutoFlowDocument(vscode.window.activeTextEditor.document)) {
         tdProvider.refresh(vscode.window.activeTextEditor.document);
     }
+}
+
+function getTemplateContent(template: string): string {
+    const templates: Record<string, string> = {
+        basic: `schema_version: 1
+name: basic_workflow
+
+variables:
+  message: Hello, World!
+
+tasks:
+  main:
+    steps:
+      - step:
+          id: log_message
+          uses: log.info
+          with:
+            message: "\${message}"
+`,
+        http: `schema_version: 1
+name: http_workflow
+
+variables:
+  api_base: https://api.example.com
+
+tasks:
+  main:
+    steps:
+      - step:
+          id: fetch_data
+          uses: http.request
+          with:
+            url: "\${api_base}/data"
+            method: GET
+          save_as:
+            body: response_data
+`,
+        browser: `schema_version: 1
+name: browser_workflow
+
+tasks:
+  main:
+    steps:
+      - step:
+          id: open_browser
+          uses: browser.open
+          with:
+            browser: chromium
+            headless: true
+          save_as:
+            browserId: browser_id
+
+      - step:
+          id: navigate
+          uses: browser.goto
+          with:
+            browserId: "\${browser_id}"
+            url: https://example.com
+
+      - step:
+          id: close
+          uses: browser.close
+          with:
+            browserId: "\${browser_id}"
+`,
+        parallel: `schema_version: 1
+name: parallel_workflow
+
+tasks:
+  main:
+    steps:
+      - parallel:
+          id: fetch_all
+          max_concurrency: 3
+          steps:
+            - step:
+                id: fetch_users
+                uses: http.request
+                with:
+                  url: https://api.example.com/users
+`,
+        files: `schema_version: 1
+name: files_workflow
+
+tasks:
+  main:
+    steps:
+      - step:
+          id: read_file
+          uses: files.read
+          with:
+            path: ./input.txt
+          save_as:
+            content: file_content
+
+      - step:
+          id: write_file
+          uses: files.write
+          with:
+            path: ./output.txt
+            content: "\${file_content}"
+`
+    };
+    
+    return templates[template] || templates.basic;
 }
 
 export function deactivate() {}

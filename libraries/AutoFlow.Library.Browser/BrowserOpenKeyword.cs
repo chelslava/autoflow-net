@@ -18,6 +18,8 @@ public sealed class BrowserOpenArgs
     public int? Width { get; set; }
     public int? Height { get; set; }
     public bool SlowMo { get; set; } = false;
+    public bool DisableJavaScript { get; set; } = false;
+    public bool IgnoreHTTPSErrors { get; set; } = false;
 }
 
 [Keyword("browser.open", Category = "Browser", Description = "Открывает браузер и создаёт новую страницу.")]
@@ -45,6 +47,8 @@ public sealed class BrowserOpenKeyword : IKeywordHandler<BrowserOpenArgs>
             args.Width,
             args.Height,
             args.SlowMo,
+            args.DisableJavaScript,
+            args.IgnoreHTTPSErrors,
             cancellationToken).ConfigureAwait(false);
 
         context.Logger.LogInformation(

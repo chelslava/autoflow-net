@@ -144,6 +144,18 @@
       {
         "command": "autoflow.gotoLine",
         "title": "AutoFlow: Go to Line"
+      },
+      {
+        "command": "autoflow.copyStepRef",
+        "title": "AutoFlow: Copy Step Reference"
+      },
+      {
+        "command": "autoflow.runFromStep",
+        "title": "AutoFlow: Run from Step"
+      },
+      {
+        "command": "autoflow.newWorkflow",
+        "title": "AutoFlow: New Workflow"
       }
     ],
     "menus": {
@@ -186,6 +198,28 @@
           "command": "autoflow.validate",
           "when": "view == autoflow-explorer",
           "group": "navigation@2"
+        },
+        {
+          "command": "autoflow.newWorkflow",
+          "when": "view == autoflow-explorer",
+          "group": "navigation@3"
+        }
+      ],
+      "view/item/context": [
+        {
+          "command": "autoflow.gotoLine",
+          "when": "view == autoflow-explorer && viewItem == step",
+          "group": "navigation@1"
+        },
+        {
+          "command": "autoflow.copyStepRef",
+          "when": "view == autoflow-explorer && viewItem == step",
+          "group": "navigation@2"
+        },
+        {
+          "command": "autoflow.runFromStep",
+          "when": "view == autoflow-explorer && viewItem == step",
+          "group": "execution@1"
         }
       ]
     },
