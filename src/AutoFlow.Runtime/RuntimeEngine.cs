@@ -93,6 +93,17 @@ public sealed class RuntimeEngine : IRuntimeEngine
 
         try
         {
+            using var logScope = _logger.BeginScope(new Dictionary<string, object>
+            {
+                ["RunId"] = runId,
+                ["WorkflowName"] = document.Name,
+                ["FilePath"] = document.FilePath ?? ""
+            });
+
+            _logger.LogInformation(
+                "Starting workflow {WorkflowName} (RunId: {RunId})",
+                document.Name, runId);
+
             await _hookRunner.OnWorkflowStartAsync(workflowContext).ConfigureAwait(false);
 
             if (!document.Tasks.TryGetValue("main", out var mainTask))
@@ -105,7 +116,8 @@ public sealed class RuntimeEngine : IRuntimeEngine
         {
             runResult.Status = ExecutionStatus.Failed;
 
-            _logger.LogError(ex, "Ошибка при выполнении workflow {WorkflowName}", document.Name);
+            _logger.LogError(ex, "Workflow {WorkflowName} failed (RunId: {RunId}) - {Duration}ms",
+                document.Name, runId, (long)(DateTimeOffset.UtcNow - startedAt).TotalMilliseconds);
             await _hookRunner.OnErrorAsync(workflowContext, ex).ConfigureAwait(false);
         }
         finally
@@ -114,6 +126,10 @@ public sealed class RuntimeEngine : IRuntimeEngine
             
             var durationMs = (runResult.FinishedAtUtc - startedAt).TotalMilliseconds;
             _telemetry.RecordWorkflowEnd(document.Name, runResult.Status.ToString(), durationMs);
+
+            _logger.LogInformation(
+                "Workflow {WorkflowName} completed (RunId: {RunId}) - Status: {Status}, Duration: {Duration}ms",
+                document.Name, runId, runResult.Status, (long)durationMs);
             
             workflowSpan?.SetStatus(runResult.Status == ExecutionStatus.Passed ? ActivityStatusCode.Ok : ActivityStatusCode.Error);
             workflowSpan?.Dispose();
