@@ -30,8 +30,6 @@ public sealed class SQLiteExecutionRepository : IExecutionRepository, IDisposabl
     private readonly SemaphoreSlim _initLock = new(1, 1);
     private readonly SecretMasker? _secretMasker;
     private readonly int _commandTimeoutSeconds;
-    private readonly SemaphoreSlim _connectionLock = new(1, 1);
-    private SqliteConnection? _sharedConnection;
     private bool _initialized;
     private bool _disposed;
 
@@ -421,23 +419,17 @@ public sealed class SQLiteExecutionRepository : IExecutionRepository, IDisposabl
 
         _disposed = true;
         _initLock.Dispose();
-        _connectionLock.Dispose();
-        _sharedConnection?.Dispose();
     }
 
-    public async ValueTask DisposeAsync()
+    public ValueTask DisposeAsync()
     {
         if (_disposed)
-            return;
+            return ValueTask.CompletedTask;
 
         _disposed = true;
         _initLock.Dispose();
-        _connectionLock.Dispose();
         
-        if (_sharedConnection is not null)
-        {
-            await _sharedConnection.DisposeAsync().ConfigureAwait(false);
-        }
+        return ValueTask.CompletedTask;
     }
 }
 

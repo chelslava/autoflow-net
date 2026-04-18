@@ -1,9 +1,8 @@
 using System;
 using System.Threading.Tasks;
 using AutoFlow.Abstractions;
-using AutoFlow.Library.Browser;
 
-namespace AutoFlow.Runtime.Hooks;
+namespace AutoFlow.Library.Browser;
 
 public sealed class BrowserCleanupHook : IWorkflowLifecycleHook
 {
