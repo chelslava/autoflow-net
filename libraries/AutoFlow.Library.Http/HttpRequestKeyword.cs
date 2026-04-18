@@ -28,6 +28,7 @@ public sealed class HttpRequestArgs
     public bool EnableCircuitBreaker { get; set; }
     public int CircuitBreakerFailureThreshold { get; set; } = 5;
     public int CircuitBreakerResetSeconds { get; set; } = 30;
+    public int? RateLimitRequestsPerSecond { get; set; }
 }
 
 [Keyword("http.request", Category = "HTTP", Description = "Executes an HTTP request.")]
@@ -35,6 +36,8 @@ public sealed class HttpRequestKeyword : IKeywordHandler<HttpRequestArgs>
 {
     private static readonly string[] AllowedSchemes = { "http", "https" };
     private const long DefaultMaxResponseSize = 50 * 1024 * 1024;
+    
+    private static readonly System.Collections.Concurrent.ConcurrentDictionary<string, RateLimiter> _rateLimiters = new();
     
     private readonly HttpClient _httpClient;
     private readonly CircuitBreaker _circuitBreaker;
@@ -61,6 +64,12 @@ public sealed class HttpRequestKeyword : IKeywordHandler<HttpRequestArgs>
         }
 
         var host = new Uri(url).Host;
+        
+        if (args.RateLimitRequestsPerSecond.HasValue && args.RateLimitRequestsPerSecond.Value > 0)
+        {
+            var limiter = _rateLimiters.GetOrAdd(host, _ => new RateLimiter(args.RateLimitRequestsPerSecond.Value));
+            await limiter.WaitForSlotAsync(cancellationToken).ConfigureAwait(false);
+        }
         
         if (args.EnableCircuitBreaker)
         {
@@ -321,4 +330,43 @@ internal sealed class LimitedStream : Stream
     public override long Seek(long offset, SeekOrigin origin) => throw new NotSupportedException();
     public override void SetLength(long value) => throw new NotSupportedException();
     public override void Write(byte[] buffer, int offset, int count) => throw new NotSupportedException();
+}
+
+internal sealed class RateLimiter
+{
+    private readonly int _requestsPerSecond;
+    private readonly System.Collections.Concurrent.ConcurrentQueue<long> _timestamps = new();
+    private readonly object _lock = new();
+
+    public RateLimiter(int requestsPerSecond)
+    {
+        _requestsPerSecond = requestsPerSecond;
+    }
+
+    public async Task WaitForSlotAsync(CancellationToken cancellationToken)
+    {
+        while (true)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+
+            lock (_lock)
+            {
+                var now = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
+                var windowStart = now - 1000;
+
+                while (_timestamps.TryPeek(out var oldest) && oldest < windowStart)
+                {
+                    _timestamps.TryDequeue(out _);
+                }
+
+                if (_timestamps.Count < _requestsPerSecond)
+                {
+                    _timestamps.Enqueue(now);
+                    return;
+                }
+            }
+
+            await Task.Delay(100, cancellationToken).ConfigureAwait(false);
+        }
+    }
 }

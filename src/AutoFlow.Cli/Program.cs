@@ -540,6 +540,176 @@ cleanCommand.SetHandler(async (int olderThan) =>
     Console.WriteLine($"Удалено {deleted} записей старше {olderThan} дней.");
 }, cleanDaysOption);
 
+var newCommand = new Command("new", "Создаёт новый workflow из шаблона.");
+var newNameArgument = new Argument<string>(
+    name: "name",
+    description: "Имя workflow файла (без расширения).");
+
+var templateOption = new Option<string>(
+    name: "--template",
+    description: "Шаблон: http, browser, parallel, files",
+    getDefaultValue: () => "basic");
+
+newCommand.AddArgument(newNameArgument);
+newCommand.AddOption(templateOption);
+
+newCommand.SetHandler((string name, string template) =>
+{
+    var fileName = name.EndsWith(".yaml") ? name : $"{name}.yaml";
+    
+    var content = template.ToLowerInvariant() switch
+    {
+        "http" => @"schema_version: 1
+name: http_example
+
+variables:
+  api_base: https://api.example.com
+
+tasks:
+  main:
+    steps:
+      - step:
+          id: fetch_data
+          uses: http.request
+          with:
+            url: ""${api_base}/data""
+            method: GET
+          save_as:
+            body: response_data
+
+      - step:
+          id: parse_response
+          uses: json.parse
+          with:
+            json: ""${response_data}""
+            path: ""results""
+          save_as:
+            value: results
+",
+        "browser" => @"schema_version: 1
+name: browser_example
+
+tasks:
+  main:
+    steps:
+      - step:
+          id: open_browser
+          uses: browser.open
+          with:
+            browser: chromium
+            headless: true
+          save_as:
+            browserId: browser_id
+
+      - step:
+          id: navigate
+          uses: browser.goto
+          with:
+            browserId: ""${browser_id}""
+            url: https://example.com
+
+      - step:
+          id: get_title
+          uses: browser.get_text
+          with:
+            browserId: ""${browser_id}""
+            selector: h1
+          save_as:
+            text: page_title
+
+      - step:
+          id: close
+          uses: browser.close
+          with:
+            browserId: ""${browser_id}""
+",
+        "parallel" => @"schema_version: 1
+name: parallel_example
+
+variables:
+  api_base: https://api.example.com
+
+tasks:
+  main:
+    steps:
+      - parallel:
+          id: fetch_all
+          max_concurrency: 3
+          steps:
+            - step:
+                id: fetch_users
+                uses: http.request
+                with:
+                  url: ""${api_base}/users""
+                save_as:
+                  body: users_data
+
+            - step:
+                id: fetch_posts
+                uses: http.request
+                with:
+                  url: ""${api_base}/posts""
+                save_as:
+                  body: posts_data
+
+            - step:
+                id: fetch_comments
+                uses: http.request
+                with:
+                  url: ""${api_base}/comments""
+                save_as:
+                  body: comments_data
+",
+        "files" => @"schema_version: 1
+name: files_example
+
+variables:
+  input_file: ./data/input.txt
+  output_file: ./data/output.txt
+
+tasks:
+  main:
+    steps:
+      - step:
+          id: read_file
+          uses: files.read
+          with:
+            path: ""${input_file}""
+          save_as:
+            content: file_content
+
+      - step:
+          id: write_file
+          uses: files.write
+          with:
+            path: ""${output_file}""
+            content: ""${file_content}""
+",
+        _ => @"schema_version: 1
+name: basic_example
+
+variables:
+  message: Hello, World!
+
+tasks:
+  main:
+    steps:
+      - step:
+          id: log_message
+          uses: log.info
+          with:
+            message: ""${message}""
+"
+    };
+
+    File.WriteAllText(fileName, content);
+    Console.WriteLine($"✓ Created: {fileName}");
+    Console.WriteLine($"  Template: {template}");
+    Console.WriteLine();
+    Console.WriteLine("Edit the file and run with:");
+    Console.WriteLine($"  dotnet run --project src/AutoFlow.Cli -- run {fileName}");
+}, newNameArgument, templateOption);
+
 var rootCommand = new RootCommand("AutoFlow.NET CLI");
 rootCommand.AddCommand(runCommand);
 rootCommand.AddCommand(validateCommand);
@@ -548,5 +718,6 @@ rootCommand.AddCommand(historyCommand);
 rootCommand.AddCommand(showCommand);
 rootCommand.AddCommand(statsCommand);
 rootCommand.AddCommand(cleanCommand);
+rootCommand.AddCommand(newCommand);
 
 return await rootCommand.InvokeAsync(args);
