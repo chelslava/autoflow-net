@@ -159,17 +159,9 @@ public sealed class FileSecretProvider : ISecretProvider
                 ? fullPath
                 : fullPath + Path.DirectorySeparatorChar;
 
-            // Check if path is within any allowed directory
-            foreach (var allowedDir in _allowedDirectories)
-            {
-                if (fullPath.StartsWith(allowedDir, StringComparison.OrdinalIgnoreCase) ||
-                    normalizedPath.StartsWith(allowedDir, StringComparison.OrdinalIgnoreCase))
-                {
-                    return true;
-                }
-            }
-
-            return false;
+            return _allowedDirectories.Any(allowedDir =>
+                fullPath.StartsWith(allowedDir, StringComparison.OrdinalIgnoreCase) ||
+                normalizedPath.StartsWith(allowedDir, StringComparison.OrdinalIgnoreCase));
         }
         catch (Exception ex) when (ex is ArgumentException or PathTooLongException or NotSupportedException)
         {

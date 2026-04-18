@@ -36,9 +36,6 @@ public static class BrowserManagerProvider
 
     public static async Task DisposeAsync()
     {
-        if (_disposed)
-            return;
-
         await _lock.WaitAsync().ConfigureAwait(false);
         try
         {

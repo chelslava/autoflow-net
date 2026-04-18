@@ -114,7 +114,7 @@ public sealed class BrowserManager : IAsyncDisposable
             if (instance.Page is not null)
                 await instance.Page.CloseAsync().ConfigureAwait(false);
         }
-        catch (Exception ex)
+        catch (PlaywrightException ex)
         {
             _logger?.LogWarning(ex, "Error closing page for browser {BrowserId}", browserId);
         }
@@ -124,7 +124,7 @@ public sealed class BrowserManager : IAsyncDisposable
             if (instance.Browser is not null)
                 await instance.Browser.CloseAsync().ConfigureAwait(false);
         }
-        catch (Exception ex)
+        catch (PlaywrightException ex)
         {
             _logger?.LogWarning(ex, "Error closing browser {BrowserId}", browserId);
         }
