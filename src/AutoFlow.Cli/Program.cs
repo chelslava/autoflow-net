@@ -388,10 +388,36 @@ static string DetermineReportFormat(string filePath, string? explicitFormat)
 }
 
 var listKeywordsCommand = new Command("list-keywords", "Выводит список доступных keywords.");
-listKeywordsCommand.SetHandler(() =>
+var listKeywordsOutputOption = new Option<string?>(
+    name: "--output",
+    description: "Output format: text (default) or json.");
+
+listKeywordsCommand.AddOption(listKeywordsOutputOption);
+
+listKeywordsCommand.SetHandler((string? outputFormat) =>
 {
+    var keywords = registry.GetAll();
+    
+    if (outputFormat?.Equals("json", StringComparison.OrdinalIgnoreCase) == true)
+    {
+        var jsonData = keywords.Select(k => new
+        {
+            name = k.Name,
+            description = k.Description,
+            category = k.Category,
+            argsType = k.ArgsType?.Name
+        });
+        var jsonOutput = System.Text.Json.JsonSerializer.Serialize(jsonData, new System.Text.Json.JsonSerializerOptions
+        {
+            WriteIndented = true,
+            PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase
+        });
+        Console.WriteLine(jsonOutput);
+        return;
+    }
+    
     Console.WriteLine("Доступные keywords:");
-    foreach (var keyword in registry.GetAll())
+    foreach (var keyword in keywords)
     {
         Console.WriteLine($"  {keyword.Name}");
         if (keyword.Description is not null)
@@ -399,7 +425,7 @@ listKeywordsCommand.SetHandler(() =>
         if (keyword.Category is not null)
             Console.WriteLine($"    Category: {keyword.Category}");
     }
-});
+}, listKeywordsOutputOption);
 
 var historyCommand = new Command("history", "Показывает историю выполнений.");
 var historyLimitOption = new Option<int>(
@@ -412,15 +438,30 @@ var historyWorkflowOption = new Option<string?>(
 var historyStatusOption = new Option<string?>(
     name: "--status",
     description: "Фильтр по статусу (Passed, Failed, etc.).");
+var historyOutputFormatOption = new Option<string?>(
+    name: "--output",
+    description: "Output format: text (default) or json.");
 
 historyCommand.AddOption(historyLimitOption);
 historyCommand.AddOption(historyWorkflowOption);
 historyCommand.AddOption(historyStatusOption);
+historyCommand.AddOption(historyOutputFormatOption);
 
-historyCommand.SetHandler(async (int limit, string? workflow, string? status) =>
+historyCommand.SetHandler(async (int limit, string? workflow, string? status, string? outputFormat) =>
 {
     var repository = host.Services.GetRequiredService<IExecutionRepository>();
     var records = await repository.GetListAsync(workflow, status, limit);
+
+    if (outputFormat?.Equals("json", StringComparison.OrdinalIgnoreCase) == true)
+    {
+        var jsonOutput = System.Text.Json.JsonSerializer.Serialize(records, new System.Text.Json.JsonSerializerOptions
+        {
+            WriteIndented = true,
+            PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase
+        });
+        Console.WriteLine(jsonOutput);
+        return;
+    }
 
     if (records.Count == 0)
     {
@@ -441,7 +482,7 @@ historyCommand.SetHandler(async (int limit, string? workflow, string? status) =>
             Console.WriteLine($"   Error: {record.ErrorMessage[..Math.Min(100, record.ErrorMessage.Length)]}...");
         Console.WriteLine();
     }
-}, historyLimitOption, historyWorkflowOption, historyStatusOption);
+}, historyLimitOption, historyWorkflowOption, historyStatusOption, historyOutputFormatOption);
 
 var showCommand = new Command("show", "Показывает детали выполнения по RunId.");
 var showRunIdArgument = new Argument<string>(
@@ -502,15 +543,30 @@ var statsDaysOption = new Option<int>(
     name: "--days",
     description: "Период в днях.",
     getDefaultValue: () => 30);
+var statsOutputFormatOption = new Option<string?>(
+    name: "--output",
+    description: "Output format: text (default) or json.");
 
 statsCommand.AddOption(statsWorkflowOption);
 statsCommand.AddOption(statsDaysOption);
+statsCommand.AddOption(statsOutputFormatOption);
 
-statsCommand.SetHandler(async (string? workflow, int days) =>
+statsCommand.SetHandler(async (string? workflow, int days, string? outputFormat) =>
 {
     var repository = host.Services.GetRequiredService<IExecutionRepository>();
     var from = DateTimeOffset.UtcNow.AddDays(-days);
     var stats = await repository.GetStatisticsAsync(workflow, from);
+
+    if (outputFormat?.Equals("json", StringComparison.OrdinalIgnoreCase) == true)
+    {
+        var jsonOutput = System.Text.Json.JsonSerializer.Serialize(stats, new System.Text.Json.JsonSerializerOptions
+        {
+            WriteIndented = true,
+            PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase
+        });
+        Console.WriteLine(jsonOutput);
+        return;
+    }
 
     Console.WriteLine($"Статистика за последние {days} дней:");
     if (workflow is not null)
@@ -522,7 +578,7 @@ statsCommand.SetHandler(async (string? workflow, int days) =>
     Console.WriteLine($"   Средняя длительность: {stats.AverageDurationMs:F0}ms");
     Console.WriteLine($"   Min/Max длительность: {stats.MinDurationMs}ms / {stats.MaxDurationMs}ms");
     Console.WriteLine($"   Всего шагов: {stats.TotalSteps}");
-}, statsWorkflowOption, statsDaysOption);
+}, statsWorkflowOption, statsDaysOption, statsOutputFormatOption);
 
 var cleanCommand = new Command("clean", "Удаляет старые записи из истории.");
 var cleanDaysOption = new Option<int>(

@@ -21,7 +21,7 @@ namespace AutoFlow.Database;
 /// <summary>
 /// Реализация репозитория на SQLite.
 /// </summary>
-public sealed class SQLiteExecutionRepository : IExecutionRepository, IDisposable
+public sealed class SQLiteExecutionRepository : IExecutionRepository, IDisposable, IAsyncDisposable
 {
     private const int DefaultCommandTimeoutSeconds = 30;
     
@@ -30,7 +30,10 @@ public sealed class SQLiteExecutionRepository : IExecutionRepository, IDisposabl
     private readonly SemaphoreSlim _initLock = new(1, 1);
     private readonly SecretMasker? _secretMasker;
     private readonly int _commandTimeoutSeconds;
+    private readonly SemaphoreSlim _connectionLock = new(1, 1);
+    private SqliteConnection? _sharedConnection;
     private bool _initialized;
+    private bool _disposed;
 
     public SQLiteExecutionRepository(string databasePath, ILogger<SQLiteExecutionRepository> logger)
     {
@@ -65,9 +68,35 @@ public sealed class SQLiteExecutionRepository : IExecutionRepository, IDisposabl
     {
         var connection = new SqliteConnection(_connectionString);
         connection.Open();
+        
         using var command = connection.CreateCommand();
-        command.CommandText = $"PRAGMA busy_timeout = {_commandTimeoutSeconds * 1000};";
+        command.CommandText = $@"
+            PRAGMA busy_timeout = {_commandTimeoutSeconds * 1000};
+            PRAGMA journal_mode = WAL;
+            PRAGMA synchronous = NORMAL;
+            PRAGMA cache_size = -64000;
+            PRAGMA temp_store = MEMORY;
+        ";
         command.ExecuteNonQuery();
+        
+        return connection;
+    }
+
+    private async Task<SqliteConnection> CreateConnectionAsync(CancellationToken cancellationToken)
+    {
+        var connection = new SqliteConnection(_connectionString);
+        await connection.OpenAsync(cancellationToken).ConfigureAwait(false);
+        
+        using var command = connection.CreateCommand();
+        command.CommandText = $@"
+            PRAGMA busy_timeout = {_commandTimeoutSeconds * 1000};
+            PRAGMA journal_mode = WAL;
+            PRAGMA synchronous = NORMAL;
+            PRAGMA cache_size = -64000;
+            PRAGMA temp_store = MEMORY;
+        ";
+        await command.ExecuteNonQueryAsync(cancellationToken).ConfigureAwait(false);
+        
         return connection;
     }
 
@@ -387,7 +416,28 @@ public sealed class SQLiteExecutionRepository : IExecutionRepository, IDisposabl
 
     public void Dispose()
     {
+        if (_disposed)
+            return;
+
+        _disposed = true;
         _initLock.Dispose();
+        _connectionLock.Dispose();
+        _sharedConnection?.Dispose();
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        if (_disposed)
+            return;
+
+        _disposed = true;
+        _initLock.Dispose();
+        _connectionLock.Dispose();
+        
+        if (_sharedConnection is not null)
+        {
+            await _sharedConnection.DisposeAsync().ConfigureAwait(false);
+        }
     }
 }
 
