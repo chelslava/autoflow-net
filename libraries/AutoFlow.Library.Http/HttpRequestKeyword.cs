@@ -282,6 +282,41 @@ public sealed class HttpRequestKeyword : IKeywordHandler<HttpRequestArgs>
 
         return false;
     }
+
+    private static RateLimiter GetOrCreateRateLimiter(string host, int requestsPerSecond)
+    {
+        CleanupOldRateLimitersIfNeeded();
+        
+        var entry = _rateLimiters.GetOrAdd(host, _ => (new RateLimiter(requestsPerSecond), DateTime.UtcNow));
+        
+        _rateLimiters.AddOrUpdate(host, entry, (_, existing) => (existing.Limiter, DateTime.UtcNow));
+        
+        return entry.Limiter;
+    }
+
+    private static void CleanupOldRateLimitersIfNeeded()
+    {
+        var now = DateTime.UtcNow;
+        
+        if ((now - _lastCleanup).TotalMinutes < 5)
+            return;
+        
+        _lastCleanup = now;
+        
+        if (_rateLimiters.Count <= MaxRateLimiters)
+            return;
+        
+        var cutoff = now.AddMinutes(-30);
+        var keysToRemove = _rateLimiters
+            .Where(kvp => kvp.Value.LastAccess < cutoff)
+            .Select(kvp => kvp.Key)
+            .ToList();
+        
+        foreach (var key in keysToRemove)
+        {
+            _rateLimiters.TryRemove(key, out _);
+        }
+    }
 }
 
 internal sealed class LimitedStream : Stream
@@ -369,41 +404,6 @@ internal sealed class RateLimiter
             }
 
             await Task.Delay(100, cancellationToken).ConfigureAwait(false);
-        }
-    }
-    
-    private static RateLimiter GetOrCreateRateLimiter(string host, int requestsPerSecond)
-    {
-        CleanupOldRateLimitersIfNeeded();
-        
-        var entry = _rateLimiters.GetOrAdd(host, _ => (new RateLimiter(requestsPerSecond), DateTime.UtcNow));
-        
-        _rateLimiters.AddOrUpdate(host, entry, (_, existing) => (existing.Limiter, DateTime.UtcNow));
-        
-        return entry.Limiter;
-    }
-
-    private static void CleanupOldRateLimitersIfNeeded()
-    {
-        var now = DateTime.UtcNow;
-        
-        if ((now - _lastCleanup).TotalMinutes < 5)
-            return;
-        
-        _lastCleanup = now;
-        
-        if (_rateLimiters.Count <= MaxRateLimiters)
-            return;
-        
-        var cutoff = now.AddMinutes(-30);
-        var keysToRemove = _rateLimiters
-            .Where(kvp => kvp.Value.LastAccess < cutoff)
-            .Select(kvp => kvp.Key)
-            .ToList();
-        
-        foreach (var key in keysToRemove)
-        {
-            _rateLimiters.TryRemove(key, out _);
         }
     }
 }
