@@ -1,0 +1,15 @@
+schema_version: 1
+name: config
+
+variables:
+  challenge_url: "http://rpachallenge.com/"
+  excel_url: "http://rpachallenge.com/assets/inputFiles/input.xlsx"
+  temp_dir: "temp/rpa_challenge"
+  reports_dir: "reports"
+  max_retries: 3
+  browser_type: "chromium"
+  headless: false
+  browser_width: 1280
+  browser_height: 800
+  timeout_ms: 30000
+  form_timeout_ms: 5000

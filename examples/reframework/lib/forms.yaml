@@ -1,0 +1,103 @@
+schema_version: 1
+name: lib_forms
+
+tasks:
+  fill_field:
+    steps:
+      - step:
+          id: fill
+          uses: browser.fill
+          with:
+            browserId: "${browser_id}"
+            selector: "${field_selector}"
+            value: "${field_value}"
+            timeoutMs: "${form_timeout_ms}"
+
+  click_element:
+    steps:
+      - step:
+          id: click
+          uses: browser.click
+          with:
+            browserId: "${browser_id}"
+            selector: "${click_selector}"
+            timeoutMs: "${form_timeout_ms}"
+
+  wait_for_element:
+    steps:
+      - step:
+          id: wait
+          uses: browser.wait
+          with:
+            browserId: "${browser_id}"
+            selector: "${wait_selector}"
+            state: visible
+            timeoutMs: "${form_timeout_ms}"
+
+  submit_form:
+    steps:
+      - step:
+          id: submit
+          uses: browser.click
+          with:
+            browserId: "${browser_id}"
+            selector: "input[type='submit']"
+            timeoutMs: "${form_timeout_ms}"
+
+  fill_employee_form:
+    steps:
+      - step:
+          id: fill_first_name
+          uses: browser.fill
+          with:
+            browserId: "${browser_id}"
+            selector: "input[ng-model='answer'][placeholder='First Name']"
+            value: "${employee_first_name}"
+
+      - step:
+          id: fill_last_name
+          uses: browser.fill
+          with:
+            browserId: "${browser_id}"
+            selector: "input[ng-model='answer'][placeholder='Last Name']"
+            value: "${employee_last_name}"
+
+      - step:
+          id: fill_company
+          uses: browser.fill
+          with:
+            browserId: "${browser_id}"
+            selector: "input[ng-model='answer'][placeholder='Company Name']"
+            value: "${employee_company}"
+
+      - step:
+          id: fill_role
+          uses: browser.fill
+          with:
+            browserId: "${browser_id}"
+            selector: "input[ng-model='answer'][placeholder='Role in Company']"
+            value: "${employee_role}"
+
+      - step:
+          id: fill_address
+          uses: browser.fill
+          with:
+            browserId: "${browser_id}"
+            selector: "input[ng-model='answer'][placeholder='Address']"
+            value: "${employee_address}"
+
+      - step:
+          id: fill_email
+          uses: browser.fill
+          with:
+            browserId: "${browser_id}"
+            selector: "input[ng-model='answer'][placeholder='Email']"
+            value: "${employee_email}"
+
+      - step:
+          id: fill_phone
+          uses: browser.fill
+          with:
+            browserId: "${browser_id}"
+            selector: "input[ng-model='answer'][placeholder='Phone Number']"
+            value: "${employee_phone}"

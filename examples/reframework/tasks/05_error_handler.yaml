@@ -1,0 +1,46 @@
+schema_version: 1
+name: error_handler
+
+import:
+  - config/settings.yaml
+
+tasks:
+  handle_error:
+    steps:
+      - step:
+          id: log_error_start
+          uses: log.info
+          with:
+            message: "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
+
+      - step:
+          id: log_error_header
+          uses: log.info
+          with:
+            message: "[ERROR_HANDLER] Exception occurred"
+
+      - step:
+          id: log_error_separator
+          uses: log.info
+          with:
+            message: "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
+
+      - step:
+          id: take_error_screenshot
+          uses: browser.screenshot
+          with:
+            browserId: "${browser_id}"
+            path: "${reports_dir}/error_screenshot.png"
+            fullPage: true
+
+      - step:
+          id: log_screenshot_saved
+          uses: log.info
+          with:
+            message: "[ERROR_HANDLER] Error screenshot saved to: ${reports_dir}/error_screenshot.png"
+
+      - step:
+          id: log_error_end
+          uses: log.info
+          with:
+            message: "[ERROR_HANDLER] Error handling complete"

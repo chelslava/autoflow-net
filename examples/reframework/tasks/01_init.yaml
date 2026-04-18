@@ -1,0 +1,102 @@
+schema_version: 1
+name: init
+
+import:
+  - config/settings.yaml
+  - lib/files.yaml
+  - lib/browser.yaml
+
+tasks:
+  init:
+    steps:
+      - step:
+          id: log_start
+          uses: log.info
+          with:
+            message: "═══════════════════════════════════════════════════"
+
+      - step:
+          id: log_header
+          uses: log.info
+          with:
+            message: "[INIT] RPA Challenge - REFramework Pattern"
+
+      - step:
+          id: log_separator
+          uses: log.info
+          with:
+            message: "═══════════════════════════════════════════════════"
+
+      - step:
+          id: create_temp_dir
+          uses: files.write
+          with:
+            path: "${temp_dir}/.gitkeep"
+            content: ""
+
+      - step:
+          id: create_reports_dir
+          uses: files.write
+          with:
+            path: "${reports_dir}/.gitkeep"
+            content: ""
+
+      - step:
+          id: log_dirs_created
+          uses: log.info
+          with:
+            message: "[INIT] Directories created"
+
+      - step:
+          id: download_excel
+          uses: http.request
+          with:
+            url: "${excel_url}"
+            method: GET
+            saveToFile: "${temp_dir}/input.xlsx"
+            timeoutMs: "${timeout_ms}"
+          save_as:
+            statusCode: download_status
+
+      - step:
+          id: log_data_downloaded
+          uses: log.info
+          with:
+            message: "[INIT] Input data downloaded"
+
+      - step:
+          id: open_browser
+          uses: browser.open
+          with:
+            browser: "${browser_type}"
+            headless: "${headless}"
+            width: "${browser_width}"
+            height: "${browser_height}"
+          save_as:
+            browserId: browser_id
+
+      - step:
+          id: log_browser_opened
+          uses: log.info
+          with:
+            message: "[INIT] Browser opened"
+
+      - step:
+          id: navigate_to_challenge
+          uses: browser.goto
+          with:
+            browserId: "${browser_id}"
+            url: "${challenge_url}"
+            timeoutMs: "${timeout_ms}"
+
+      - step:
+          id: log_navigated
+          uses: log.info
+          with:
+            message: "[INIT] Navigated to challenge page"
+
+      - step:
+          id: log_init_complete
+          uses: log.info
+          with:
+            message: "[INIT] ✓ Initialization complete"

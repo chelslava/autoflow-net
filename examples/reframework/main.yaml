@@ -1,0 +1,36 @@
+schema_version: 1
+name: rpa_challenge_reframework
+
+import:
+  - config/settings.yaml
+  - tasks/01_init.yaml
+  - tasks/02_get_transaction.yaml
+  - tasks/03_process_transaction.yaml
+  - tasks/04_end_process.yaml
+  - tasks/05_error_handler.yaml
+
+tasks:
+  main:
+    on_error:
+      - call: handle_error
+
+    finally:
+      - step:
+          id: ensure_browser_closed
+          uses: browser.close
+          with:
+            browserId: "${browser_id}"
+          continue_on_error: true
+
+      - step:
+          id: ensure_cleanup
+          uses: files.delete
+          with:
+            path: "${temp_dir}"
+          continue_on_error: true
+
+    steps:
+      - call: init
+      - call: get_transaction
+      - call: process_transaction
+      - call: end_process

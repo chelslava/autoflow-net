@@ -1,0 +1,69 @@
+schema_version: 1
+name: lib_browser
+
+tasks:
+  open_browser:
+    steps:
+      - step:
+          id: open
+          uses: browser.open
+          with:
+            browser: "${browser_type}"
+            headless: "${headless}"
+            width: "${browser_width}"
+            height: "${browser_height}"
+          save_as:
+            browserId: browser_id
+
+      - step:
+          id: log_opened
+          uses: log.info
+          with:
+            message: "[BROWSER] Opened browser: ${browser_id}"
+
+  close_browser:
+    steps:
+      - step:
+          id: close
+          uses: browser.close
+          with:
+            browserId: "${browser_id}"
+          continue_on_error: true
+
+      - step:
+          id: log_closed
+          uses: log.info
+          with:
+            message: "[BROWSER] Closed browser"
+
+  navigate:
+    steps:
+      - step:
+          id: goto_url
+          uses: browser.goto
+          with:
+            browserId: "${browser_id}"
+            url: "${target_url}"
+            timeoutMs: "${timeout_ms}"
+
+      - step:
+          id: log_navigated
+          uses: log.info
+          with:
+            message: "[BROWSER] Navigated to: ${target_url}"
+
+  take_screenshot:
+    steps:
+      - step:
+          id: screenshot
+          uses: browser.screenshot
+          with:
+            browserId: "${browser_id}"
+            path: "${screenshot_path}"
+            fullPage: true
+
+      - step:
+          id: log_screenshot
+          uses: log.info
+          with:
+            message: "[BROWSER] Screenshot saved: ${screenshot_path}"

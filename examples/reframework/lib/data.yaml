@@ -1,0 +1,77 @@
+schema_version: 1
+name: lib_data
+
+tasks:
+  get_employee_data:
+    steps:
+      - step:
+          id: parse_data
+          uses: json.parse
+          with:
+            json: '[{"firstName":"John","lastName":"Doe","company":"ACME Corp","role":"Developer","address":"123 Main St","email":"john@example.com","phone":"555-123-4567"},{"firstName":"Jane","lastName":"Smith","company":"Tech Inc","role":"Manager","address":"456 Oak Ave","email":"jane@example.com","phone":"555-987-6543"},{"firstName":"Bob","lastName":"Johnson","company":"Data Co","role":"Analyst","address":"789 Pine Rd","email":"bob@example.com","phone":"555-456-7890"}]'
+          save_as:
+            value: employees
+
+      - step:
+          id: log_data_loaded
+          uses: log.info
+          with:
+            message: "[DATA] Loaded employee data"
+
+  set_employee_context:
+    steps:
+      - step:
+          id: set_first_name
+          uses: log.info
+          with:
+            message: "${emp_first_name}"
+          save_as:
+            value: employee_first_name
+
+      - step:
+          id: set_last_name
+          uses: log.info
+          with:
+            message: "${emp_last_name}"
+          save_as:
+            value: employee_last_name
+
+      - step:
+          id: set_company
+          uses: log.info
+          with:
+            message: "${emp_company}"
+          save_as:
+            value: employee_company
+
+      - step:
+          id: set_role
+          uses: log.info
+          with:
+            message: "${emp_role}"
+          save_as:
+            value: employee_role
+
+      - step:
+          id: set_address
+          uses: log.info
+          with:
+            message: "${emp_address}"
+          save_as:
+            value: employee_address
+
+      - step:
+          id: set_email
+          uses: log.info
+          with:
+            message: "${emp_email}"
+          save_as:
+            value: employee_email
+
+      - step:
+          id: set_phone
+          uses: log.info
+          with:
+            message: "${emp_phone}"
+          save_as:
+            value: employee_phone

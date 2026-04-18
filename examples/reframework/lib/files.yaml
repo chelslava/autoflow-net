@@ -1,0 +1,52 @@
+schema_version: 1
+name: lib_files
+
+tasks:
+  create_directory:
+    steps:
+      - step:
+          id: create
+          uses: files.write
+          with:
+            path: "${dir_path}/.gitkeep"
+            content: ""
+
+      - step:
+          id: log_created
+          uses: log.info
+          with:
+            message: "[FILES] Created directory: ${dir_path}"
+
+  download_file:
+    steps:
+      - step:
+          id: download
+          uses: http.request
+          with:
+            url: "${download_url}"
+            method: GET
+            saveToFile: "${save_path}"
+            timeoutMs: "${timeout_ms}"
+          save_as:
+            statusCode: download_status
+
+      - step:
+          id: log_downloaded
+          uses: log.info
+          with:
+            message: "[FILES] Downloaded: ${save_path}"
+
+  cleanup:
+    steps:
+      - step:
+          id: delete
+          uses: files.delete
+          with:
+            path: "${cleanup_path}"
+          continue_on_error: true
+
+      - step:
+          id: log_cleaned
+          uses: log.info
+          with:
+            message: "[FILES] Cleaned up: ${cleanup_path}"

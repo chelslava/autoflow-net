@@ -1,0 +1,141 @@
+schema_version: 1
+name: process_transaction
+
+import:
+  - config/settings.yaml
+  - lib/forms.yaml
+
+tasks:
+  process_transaction:
+    steps:
+      - step:
+          id: log_start
+          uses: log.info
+          with:
+            message: "───────────────────────────────────────────────────"
+
+      - step:
+          id: log_header
+          uses: log.info
+          with:
+            message: "[PROCESS_TRANSACTION] Processing employee: ${employee_first_name} ${employee_last_name}"
+
+      - step:
+          id: click_start_button
+          uses: browser.click
+          with:
+            browserId: "${browser_id}"
+            selector: "button.ng-binding"
+            timeoutMs: "${form_timeout_ms}"
+
+      - step:
+          id: log_clicked_start
+          uses: log.info
+          with:
+            message: "[PROCESS_TRANSACTION] Clicked Start button"
+
+      - step:
+          id: wait_form
+          uses: browser.wait
+          with:
+            browserId: "${browser_id}"
+            selector: "input[ng-model='answer']"
+            state: visible
+            timeoutMs: "${form_timeout_ms}"
+
+      - step:
+          id: log_form_ready
+          uses: log.info
+          with:
+            message: "[PROCESS_TRANSACTION] Form loaded, filling fields..."
+
+      - step:
+          id: fill_first_name
+          uses: browser.fill
+          with:
+            browserId: "${browser_id}"
+            selector: "input[ng-model='answer'][placeholder='First Name']"
+            value: "${employee_first_name}"
+
+      - step:
+          id: fill_last_name
+          uses: browser.fill
+          with:
+            browserId: "${browser_id}"
+            selector: "input[ng-model='answer'][placeholder='Last Name']"
+            value: "${employee_last_name}"
+
+      - step:
+          id: fill_company
+          uses: browser.fill
+          with:
+            browserId: "${browser_id}"
+            selector: "input[ng-model='answer'][placeholder='Company Name']"
+            value: "${employee_company}"
+
+      - step:
+          id: fill_role
+          uses: browser.fill
+          with:
+            browserId: "${browser_id}"
+            selector: "input[ng-model='answer'][placeholder='Role in Company']"
+            value: "${employee_role}"
+
+      - step:
+          id: fill_address
+          uses: browser.fill
+          with:
+            browserId: "${browser_id}"
+            selector: "input[ng-model='answer'][placeholder='Address']"
+            value: "${employee_address}"
+
+      - step:
+          id: fill_email
+          uses: browser.fill
+          with:
+            browserId: "${browser_id}"
+            selector: "input[ng-model='answer'][placeholder='Email']"
+            value: "${employee_email}"
+
+      - step:
+          id: fill_phone
+          uses: browser.fill
+          with:
+            browserId: "${browser_id}"
+            selector: "input[ng-model='answer'][placeholder='Phone Number']"
+            value: "${employee_phone}"
+
+      - step:
+          id: log_fields_filled
+          uses: log.info
+          with:
+            message: "[PROCESS_TRANSACTION] All fields filled"
+
+      - step:
+          id: submit_form
+          uses: browser.click
+          with:
+            browserId: "${browser_id}"
+            selector: "input[type='submit']"
+            timeoutMs: "${form_timeout_ms}"
+
+      - step:
+          id: log_submitted
+          uses: log.info
+          with:
+            message: "[PROCESS_TRANSACTION] Form submitted"
+
+      - step:
+          id: wait_result
+          uses: browser.wait
+          with:
+            browserId: "${browser_id}"
+            selector: "div.message, input[ng-model='answer']"
+            state: visible
+            timeoutMs: "${form_timeout_ms}"
+
+      - step:
+          id: log_complete
+          uses: log.info
+          with:
+            message: "[PROCESS_TRANSACTION] ✓ Transaction processed"
