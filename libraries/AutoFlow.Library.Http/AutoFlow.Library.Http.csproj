@@ -6,6 +6,7 @@
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\src\AutoFlow.Abstractions\AutoFlow.Abstractions.csproj" />
+    <ProjectReference Include="..\..\src\AutoFlow.Runtime\AutoFlow.Runtime.csproj" />
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="Microsoft.Extensions.Http" />
