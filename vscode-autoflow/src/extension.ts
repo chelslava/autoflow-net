@@ -11,6 +11,7 @@ import { AutoFlowSignatureHelpProvider } from './providers/signatureHelpProvider
 import { AutoFlowWorkspaceSymbolProvider } from './providers/workspaceSymbolProvider';
 import { AutoFlowTreeDataProvider } from './providers/treeViewProvider';
 import { AutoFlowStatusBar } from './providers/statusBar';
+import { AutoFlowCodeLensProvider } from './providers/codeLensProvider';
 import { registerCommands } from './commands';
 import { AutoFlowDebugAdapterDescriptorFactory } from './debug/debugAdapter';
 
@@ -198,6 +199,10 @@ function registerProviders(context: vscode.ExtensionContext) {
 
     context.subscriptions.push(
         vscode.languages.registerWorkspaceSymbolProvider(new AutoFlowWorkspaceSymbolProvider())
+    );
+
+    context.subscriptions.push(
+        vscode.languages.registerCodeLensProvider(selector, new AutoFlowCodeLensProvider())
     );
 
     const tdProvider = getTreeDataProvider(context);

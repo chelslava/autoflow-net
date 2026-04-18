@@ -785,6 +785,86 @@ tasks:
     Console.WriteLine($"  dotnet run --project src/AutoFlow.Cli -- run {fileName}");
 }, newNameArgument, templateOption);
 
+var graphCommand = new Command("graph", "Generates workflow dependency visualization (Mermaid format).");
+var graphFileArgument = new Argument<FileInfo>(
+    name: "file",
+    description: "Workflow YAML file.");
+
+graphCommand.AddArgument(graphFileArgument);
+
+graphCommand.SetHandler((FileInfo file) =>
+{
+    if (!file.Exists)
+    {
+        Console.WriteLine($"✗ File not found: {file.FullName}");
+        return;
+    }
+
+    try
+    {
+        var yaml = File.ReadAllText(file.FullName);
+        var document = loader.LoadFromString(yaml, file.DirectoryName);
+        
+        Console.WriteLine("```mermaid");
+        Console.WriteLine("flowchart TD");
+        Console.WriteLine($"    subgraph {document.Name}[{document.Name}]");
+        
+        foreach (var (taskName, task) in document.Tasks)
+        {
+            Console.WriteLine($"        subgraph {taskName}[Task: {taskName}]");
+            GenerateStepsGraph(task.Steps, taskName);
+            Console.WriteLine("        end");
+        }
+        
+        Console.WriteLine("    end");
+        Console.WriteLine("```");
+    }
+    catch (Exception ex)
+    {
+        Console.WriteLine($"✗ Parse error: {ex.Message}");
+    }
+}, graphFileArgument);
+
+static void GenerateStepsGraph(List<IWorkflowNode> steps, string parent)
+{
+    for (var i = 0; i < steps.Count; i++)
+    {
+        var node = steps[i];
+        var nodeId = $"{parent}_{i}";
+        
+        switch (node)
+        {
+            case StepNode step:
+                var label = !string.IsNullOrEmpty(step.Id) ? step.Id : step.Uses ?? "unnamed";
+                Console.WriteLine($"            {nodeId}[\"{label}\"]");
+                break;
+            case IfNode ifNode:
+                Console.WriteLine($"            {nodeId}{{\"if: condition\"}}");
+                GenerateStepsGraph(ifNode.ThenSteps, $"{nodeId}_then");
+                if (ifNode.ElseSteps.Count > 0)
+                    GenerateStepsGraph(ifNode.ElseSteps, $"{nodeId}_else");
+                break;
+            case ParallelNode parallel:
+                Console.WriteLine($"            {nodeId}[/\"parallel x{parallel.Steps.Count}\"\]");
+                break;
+            case ForEachNode forEach:
+                Console.WriteLine($"            {nodeId}([\"for each: {forEach.As}\"])");
+                break;
+            case CallNode call:
+                Console.WriteLine($"            {nodeId}[[\"call: {call.Task}\"]]");
+                break;
+            case RetryNode retry:
+                Console.WriteLine($"            {nodeId}(\"retry x{retry.MaxAttempts}\")");
+                break;
+        }
+        
+        if (i > 0)
+        {
+            Console.WriteLine($"            {parent}_{i - 1} --> {nodeId}");
+        }
+    }
+}
+
 var rootCommand = new RootCommand("AutoFlow.NET CLI");
 rootCommand.AddCommand(runCommand);
 rootCommand.AddCommand(validateCommand);
@@ -794,5 +874,6 @@ rootCommand.AddCommand(showCommand);
 rootCommand.AddCommand(statsCommand);
 rootCommand.AddCommand(cleanCommand);
 rootCommand.AddCommand(newCommand);
+rootCommand.AddCommand(graphCommand);
 
 return await rootCommand.InvokeAsync(args);
