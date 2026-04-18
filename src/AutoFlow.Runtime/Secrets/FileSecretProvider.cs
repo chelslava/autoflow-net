@@ -15,6 +15,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using AutoFlow.Abstractions;
+using Microsoft.Extensions.Logging;
 
 namespace AutoFlow.Runtime.Secrets;
 
@@ -27,6 +28,7 @@ public sealed class FileSecretProvider : ISecretProvider
 {
     private readonly HashSet<string> _allowedDirectories;
     private readonly bool _allowAnyPath;
+    private readonly ILogger<FileSecretProvider>? _logger;
 
     /// <summary>
     /// Создаёт провайдер с whitelist разрешённых директорий.
@@ -39,18 +41,45 @@ public sealed class FileSecretProvider : ISecretProvider
     /// </param>
     /// <param name="allowAnyPath">
     /// Если true, разрешает любой путь (НЕ БЕЗОПАСНО - используйте только для тестов!).
+    /// ⚠️ SECURITY WARNING: This option bypasses directory whitelist and should NEVER be used in production!
     /// </param>
+    /// <param name="logger">Optional logger for security warnings.</param>
+    /// <exception cref="InvalidOperationException">
+    /// Thrown when allowAnyPath is true in production environment (detected via DOTNET_ENVIRONMENT or ASPNETCORE_ENVIRONMENT).
+    /// </exception>
     public FileSecretProvider(
         IEnumerable<string>? allowedDirectories = null,
-        bool allowAnyPath = false)
+        bool allowAnyPath = false,
+        ILogger<FileSecretProvider>? logger = null)
     {
-        _allowAnyPath = allowAnyPath;
-
+        _logger = logger;
+        
         if (allowAnyPath)
         {
+            var environment = Environment.GetEnvironmentVariable("DOTNET_ENVIRONMENT")
+                ?? Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT")
+                ?? "Production";
+            
+            var isProduction = environment.Equals("Production", StringComparison.OrdinalIgnoreCase);
+            
+            if (isProduction)
+            {
+                throw new InvalidOperationException(
+                    "SECURITY VIOLATION: FileSecretProvider with allowAnyPath=true is not allowed in Production environment. " +
+                    "This setting bypasses security boundaries and could expose sensitive system files. " +
+                    "Set explicit allowedDirectories instead.");
+            }
+            
+            _logger?.LogWarning(
+                "⚠️ SECURITY WARNING: FileSecretProvider initialized with allowAnyPath=true. " +
+                "This bypasses directory whitelist. Use ONLY for testing!");
+            
+            _allowAnyPath = true;
             _allowedDirectories = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
             return;
         }
+
+        _allowAnyPath = false;
 
         var dirs = allowedDirectories?.ToList() ?? GetDefaultAllowedDirectories();
         _allowedDirectories = new HashSet<string>(

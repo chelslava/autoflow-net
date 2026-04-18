@@ -3,17 +3,8 @@ using System.IO;
 
 namespace AutoFlow.Library.Files;
 
-/// <summary>
-/// Provides path validation to prevent path traversal attacks.
-/// </summary>
 public static class PathValidator
 {
-    /// <summary>
-    /// Validates that the path is within the allowed base directory.
-    /// </summary>
-    /// <param name="path">The path to validate.</param>
-    /// <param name="basePath">The allowed base directory. If null, uses current directory.</param>
-    /// <returns>A tuple indicating if the path is valid and the full path.</returns>
     public static (bool IsValid, string? FullPath, string? ErrorMessage) ValidatePath(
         string path,
         string? basePath = null)
@@ -25,7 +16,13 @@ public static class PathValidator
 
         try
         {
-            // Normalize base path
+            var decodedPath = DecodePath(path);
+
+            if (ContainsSuspiciousPatterns(decodedPath))
+            {
+                return (false, null, "Path contains suspicious traversal patterns.");
+            }
+
             var allowedBase = basePath switch
             {
                 not null => Path.GetFullPath(basePath),
@@ -34,36 +31,25 @@ public static class PathValidator
 
             string fullPath;
 
-            // Handle absolute paths
-            if (Path.IsPathRooted(path))
+            if (Path.IsPathRooted(decodedPath))
             {
-                fullPath = Path.GetFullPath(path);
-                if (!fullPath.StartsWith(allowedBase, StringComparison.OrdinalIgnoreCase))
+                fullPath = Path.GetFullPath(decodedPath);
+                if (!IsWithinDirectory(fullPath, allowedBase))
                 {
-                    return (false, null, $"Access denied: absolute path '{path}' is outside the allowed directory.");
+                    return (false, null, $"Access denied: absolute path is outside the allowed directory.");
                 }
             }
             else
             {
-#pragma warning disable CA5360 // Path.Combine is safe here - allowedBase is controlled by application config
-                var resolvedPath = Path.Combine(allowedBase, path);
+#pragma warning disable CA5360
+                var resolvedPath = Path.Combine(allowedBase, decodedPath);
 #pragma warning restore CA5360
                 fullPath = Path.GetFullPath(resolvedPath);
             }
 
-            // Ensure the resolved path is within the allowed base directory
-            if (!fullPath.StartsWith(allowedBase, StringComparison.OrdinalIgnoreCase))
+            if (!IsWithinDirectory(fullPath, allowedBase))
             {
-                return (false, null, $"Access denied: path '{path}' is outside the allowed directory.");
-            }
-
-            // Check for suspicious path components
-            var suspiciousPatterns = new[] { "..", "//", "~" };
-            var suspiciousPattern = suspiciousPatterns.FirstOrDefault(p => path.Contains(p));
-            
-            if (suspiciousPattern is not null)
-            {
-                return (false, null, $"Path contains suspicious pattern: '{suspiciousPattern}'");
+                return (false, null, $"Access denied: path is outside the allowed directory.");
             }
 
             return (true, fullPath, null);
@@ -74,9 +60,59 @@ public static class PathValidator
         }
     }
 
-    /// <summary>
-    /// Gets the allowed base path from configuration or defaults to current directory.
-    /// </summary>
+    private static string DecodePath(string path)
+    {
+        var decoded = path;
+
+        try
+        {
+            decoded = Uri.UnescapeDataString(path);
+        }
+        catch
+        {
+        }
+
+        decoded = decoded.Replace('\\', '/');
+
+        return decoded;
+    }
+
+    private static bool ContainsSuspiciousPatterns(string path)
+    {
+        var normalized = path.ToLowerInvariant();
+
+        var patterns = new[]
+        {
+            "..",
+            "~",
+            "/./",
+            "//"
+        };
+
+        foreach (var pattern in patterns)
+        {
+            if (normalized.Contains(pattern))
+                return true;
+        }
+
+        if (normalized.StartsWith("./") || normalized.StartsWith("~/"))
+            return true;
+
+        if (normalized.Contains("%2e") || normalized.Contains("%252e"))
+            return true;
+
+        return false;
+    }
+
+    private static bool IsWithinDirectory(string fullPath, string baseDirectory)
+    {
+        var normalizedFull = Path.GetFullPath(fullPath).TrimEnd(Path.DirectorySeparatorChar);
+        var normalizedBase = Path.GetFullPath(baseDirectory).TrimEnd(Path.DirectorySeparatorChar);
+
+        return normalizedFull.StartsWith(normalizedBase + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase) ||
+               normalizedFull.Equals(normalizedBase, StringComparison.OrdinalIgnoreCase);
+    }
+
     public static string GetAllowedBasePath(string? configuredPath)
     {
         if (string.IsNullOrWhiteSpace(configuredPath))

@@ -54,7 +54,7 @@ public sealed class KeywordExecutor
         {
             handler = _serviceProvider.GetRequiredService(registration.HandlerType);
         }
-        catch (Exception ex) when (ex is not null)
+        catch (Exception ex)
         {
             return KeywordResult.Failure(
                 $"Failed to resolve handler for keyword '{keywordName}' in step '{stepId}': {ex.Message}. " +
@@ -76,7 +76,7 @@ public sealed class KeywordExecutor
         {
             typedArgs = BindArgs(rawArgs, registration.ArgsType) ?? Activator.CreateInstance(registration.ArgsType)!;
         }
-        catch (Exception ex) when (ex is not null)
+        catch (Exception ex)
         {
             var maskedArgs = MaskSensitiveData(rawArgs);
             return KeywordResult.Failure(
@@ -106,7 +106,7 @@ public sealed class KeywordExecutor
 
             typedTask = resultTask;
         }
-        catch (Exception ex) when (ex is not null)
+        catch (Exception ex)
         {
             var innerEx = ex is System.Reflection.TargetInvocationException tie ? tie.InnerException : ex;
             return KeywordResult.Failure(
@@ -131,19 +131,30 @@ public sealed class KeywordExecutor
         return result ?? throw new InvalidOperationException($"Failed to deserialize to '{argsType.Name}'");
     }
     
+    private static readonly System.Text.RegularExpressions.Regex SensitiveDataRegex = new(
+        @"""(password|token|secret|api[_-]?key|auth[_-]?token|credential)""\s*:\s*""[^""]*""",
+        System.Text.RegularExpressions.RegexOptions.IgnoreCase | System.Text.RegularExpressions.RegexOptions.Compiled,
+        TimeSpan.FromSeconds(1));
+
+    private const int MaxMaskingInputSize = 1024 * 1024;
+
     private static string MaskSensitiveData(object? data)
     {
         if (data is null)
             return "null";
-            
+
         var json = JsonSerializer.Serialize(data, new JsonSerializerOptions { WriteIndented = false });
-        
-        var masked = System.Text.RegularExpressions.Regex.Replace(
-            json,
-            @"""(password|token|secret|api[_-]?key|auth[_-]?token|credential)""\s*:\s*""[^""]*""",
-            @"""$1"":""***""",
-            System.Text.RegularExpressions.RegexOptions.IgnoreCase);
-            
-        return masked;
+
+        if (json.Length > MaxMaskingInputSize)
+            return $"[Data too large to mask: {json.Length:N0} bytes]";
+
+        try
+        {
+            return SensitiveDataRegex.Replace(json, @"""$1"":""***""");
+        }
+        catch (System.Text.RegularExpressions.RegexMatchTimeoutException)
+        {
+            return "[Masking timed out - data may contain sensitive values]";
+        }
     }
 }

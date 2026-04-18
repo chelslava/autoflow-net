@@ -1,44 +1,58 @@
-// =============================================================================
-// SecretMasker.cs — маскирование секретов в строках.
-//
-// Хранит список известных секретов и заменяет их на *** в логах и отчётах.
-// Используется в VariableResolver и JsonReportGenerator.
-// =============================================================================
-
 using System;
 using System.Collections.Generic;
 using System.Linq;
 
 namespace AutoFlow.Abstractions;
 
-/// <summary>
-/// Маскирует секреты в строках. Хранит список известных секретов.
-/// </summary>
 public sealed class SecretMasker
 {
+    private const int DefaultMaxSecrets = 1000;
+    private const int MinSecretLength = 4;
+
+    private readonly LinkedList<string> _orderedSecrets = new();
     private readonly HashSet<string> _secrets = new(StringComparer.Ordinal);
     private readonly object _lock = new();
+    private readonly int _maxSecrets;
 
-    /// <summary>Регистрирует секрет для маскирования.</summary>
+    public SecretMasker(int maxSecrets = DefaultMaxSecrets)
+    {
+        if (maxSecrets <= 0)
+            throw new ArgumentOutOfRangeException(nameof(maxSecrets), "Max secrets must be positive.");
+
+        _maxSecrets = maxSecrets;
+    }
+
     public void RegisterSecret(string secret)
     {
-        if (string.IsNullOrEmpty(secret) || secret.Length < 4)
+        if (string.IsNullOrEmpty(secret) || secret.Length < MinSecretLength)
             return;
 
         lock (_lock)
         {
+            if (_secrets.Contains(secret))
+                return;
+
+            if (_secrets.Count >= _maxSecrets)
+            {
+                var oldest = _orderedSecrets.First?.Value;
+                if (oldest is not null)
+                {
+                    _orderedSecrets.RemoveFirst();
+                    _secrets.Remove(oldest);
+                }
+            }
+
             _secrets.Add(secret);
+            _orderedSecrets.AddLast(secret);
         }
     }
 
-    /// <summary>Регистрирует несколько секретов.</summary>
     public void RegisterSecrets(IEnumerable<string> secrets)
     {
         foreach (var secret in secrets)
             RegisterSecret(secret);
     }
 
-    /// <summary>Маскирует секреты в строке, заменяя их на ***.</summary>
     public string Mask(string? input)
     {
         if (string.IsNullOrEmpty(input))
@@ -60,16 +74,15 @@ public sealed class SecretMasker
         return result;
     }
 
-    /// <summary>Очищает все зарегистрированные секреты.</summary>
     public void Clear()
     {
         lock (_lock)
         {
             _secrets.Clear();
+            _orderedSecrets.Clear();
         }
     }
 
-    /// <summary>Возвращает количество зарегистрированных секретов.</summary>
     public int Count
     {
         get
@@ -80,4 +93,6 @@ public sealed class SecretMasker
             }
         }
     }
+
+    public int MaxSecrets => _maxSecrets;
 }

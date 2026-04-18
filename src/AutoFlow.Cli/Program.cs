@@ -134,7 +134,7 @@ validateCommand.SetHandler((FileInfo file) =>
         Console.WriteLine($"  Line {yamlEx.Start.Line}, Column {yamlEx.Start.Column}: {yamlEx.Message}");
         return;
     }
-    catch (Exception ex) when (ex is not null)
+    catch (Exception ex)
     {
         Console.WriteLine($"✗ Parse error: {ex.Message}");
         return;
@@ -189,7 +189,7 @@ runCommand.SetHandler(async (FileInfo file, FileInfo? output, string? format, st
     {
         document = loader.LoadFromFile(file.FullName);
     }
-    catch (Exception ex) when (ex is not null)
+    catch (Exception ex)
     {
         Console.WriteLine($"Ошибка загрузки workflow: {ex.Message}");
         return;

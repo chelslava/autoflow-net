@@ -203,10 +203,10 @@ public sealed class RuntimeEngine : IRuntimeEngine
                 {
                     await ExecuteNodes(task.Finally.Steps, document, context, runResult, workflowContext, cancellationToken).ConfigureAwait(false);
                 }
-                catch (Exception ex) when (ex is not null)
-                {
-                    _logger.LogError(ex, "Ошибка в finally блоке");
-                }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Ошибка в finally блоке");
+            }
             }
         }
 
@@ -413,7 +413,7 @@ public sealed class RuntimeEngine : IRuntimeEngine
                 HandleStepFailure(step, stepResult, runResult);
                 break;
             }
-            catch (Exception ex) when (ex is not null)
+            catch (Exception ex)
             {
                 _logger.LogError(ex, "Ошибка при выполнении шага {StepId} (попытка {Attempt}/{Max}).",
                     step.Id, attempt, maxAttempts);
@@ -533,7 +533,7 @@ public sealed class RuntimeEngine : IRuntimeEngine
 
                 await ExecuteNode(node, document, context, runResult, workflowContext, cancellationToken).ConfigureAwait(false);
             }
-            catch (Exception ex) when (ex is not null)
+            catch (Exception ex)
             {
                 exceptions.Add(ex);
                 failed = true;
