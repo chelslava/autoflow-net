@@ -364,8 +364,14 @@ static void PrintExecutionPlan(List<IWorkflowNode> nodes, int indent)
                 PrintExecutionPlan(forEach.Steps, indent + 1);
                 break;
             case ParallelNode parallel:
-                Console.WriteLine($"{prefix}|| PARALLEL (max: {parallel.MaxConcurrency})");
-                PrintExecutionPlan(parallel.Steps, indent + 1);
+                Console.WriteLine($"{prefix}|| PARALLEL (max: {parallel.MaxConcurrency}) [{parallel.Steps.Count} steps]");
+                for (var i = 0; i < parallel.Steps.Count; i++)
+                {
+                    var node = parallel.Steps[i];
+                    var isLast = i == parallel.Steps.Count - 1;
+                    var connector = isLast ? "└─" : "├─";
+                    Console.WriteLine($"{prefix}  {connector} [{GetStepId(node)}]");
+                }
                 break;
             case CallNode call:
                 Console.WriteLine($"{prefix}> CALL {call.Task}");
@@ -386,6 +392,19 @@ static string DetermineReportFormat(string filePath, string? explicitFormat)
     var extension = Path.GetExtension(filePath).ToLowerInvariant();
     return extension == ".html" ? "html" : "json";
 }
+
+static string GetStepId(IWorkflowNode node) => node switch
+{
+    StepNode step => !string.IsNullOrEmpty(step.Id) ? step.Id : step.Uses ?? "unnamed",
+    IfNode ifNode => "if-condition",
+    ForEachNode forEach => $"for-each as {forEach.As}",
+    ParallelNode => "parallel",
+    CallNode call => $"call {call.Task}",
+    GroupNode group => group.Name,
+    RetryNode retry => $"retry x{retry.MaxAttempts}",
+    OnErrorNode onError => "on-error",
+    _ => "unknown"
+};
 
 var listKeywordsCommand = new Command("list-keywords", "Выводит список доступных keywords.");
 var listKeywordsOutputOption = new Option<string?>(
