@@ -809,10 +809,10 @@ graphCommand.SetHandler((FileInfo file) =>
         Console.WriteLine("flowchart TD");
         Console.WriteLine($"    subgraph {document.Name}[{document.Name}]");
         
-        foreach (var task in document.Tasks)
+        foreach (var (taskName, task) in document.Tasks)
         {
-            Console.WriteLine($"        subgraph {task.Name}[Task: {task.Name}]");
-            GenerateStepsGraph(task.Steps, task.Name);
+            Console.WriteLine($"        subgraph {taskName}[Task: {taskName}]");
+            GenerateStepsGraph(task.Steps, taskName);
             Console.WriteLine("        end");
         }
         
