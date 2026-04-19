@@ -368,10 +368,10 @@ static void PrintExecutionPlan(List<IWorkflowNode> nodes, int indent)
                 Console.WriteLine($"{prefix}|| PARALLEL (max: {parallel.MaxConcurrency}) [{parallel.Steps.Count} steps]");
                 for (var i = 0; i < parallel.Steps.Count; i++)
                 {
-                    var node = parallel.Steps[i];
+                    var parallelNode = parallel.Steps[i];
                     var isLast = i == parallel.Steps.Count - 1;
                     var connector = isLast ? "└─" : "├─";
-                    Console.WriteLine($"{prefix}  {connector} [{GetStepId(node)}]");
+                    Console.WriteLine($"{prefix}  {connector} [{GetStepId(parallelNode)}]");
                 }
                 break;
             case CallNode call:
@@ -397,13 +397,11 @@ static string DetermineReportFormat(string filePath, string? explicitFormat)
 static string GetStepId(IWorkflowNode node) => node switch
 {
     StepNode step => !string.IsNullOrEmpty(step.Id) ? step.Id : step.Uses ?? "unnamed",
-    IfNode ifNode => "if-condition",
+    IfNode => "if-condition",
     ForEachNode forEach => $"for-each as {forEach.As}",
     ParallelNode => "parallel",
     CallNode call => $"call {call.Task}",
     GroupNode group => group.Name,
-    RetryNode retry => $"retry x{retry.MaxAttempts}",
-    OnErrorNode onError => "on-error",
     _ => "unknown"
 };
 
@@ -805,7 +803,7 @@ graphCommand.SetHandler((FileInfo file) =>
     {
         var parser = host.Services.GetRequiredService<IWorkflowParser>();
         var yaml = File.ReadAllText(file.FullName);
-        var document = parser.ParseFromString(yaml, file.DirectoryName);
+        var document = parser.Parse(yaml);
         
         Console.WriteLine("```mermaid");
         Console.WriteLine("flowchart TD");
@@ -825,7 +823,7 @@ graphCommand.SetHandler((FileInfo file) =>
     {
         Console.WriteLine($"✗ Parse error: {ex.Message}");
     }
-}, graphFileArgument, parserOption);
+}, graphFileArgument);
 
 static void GenerateStepsGraph(List<IWorkflowNode> steps, string parent)
 {
