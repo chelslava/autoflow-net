@@ -38,6 +38,8 @@ data/
 
 # Reports (generated)
 reports/
+output/
+temp/
 
 # Kilo IDE
 .kilo/
