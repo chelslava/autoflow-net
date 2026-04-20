@@ -89,10 +89,8 @@ builder.Services.AddKeywordsFromAssembly(
 
 using var host = builder.Build();
 
-#pragma warning disable CS0618 // Type or member is obsolete
 var browserManager = host.Services.GetRequiredService<BrowserManager>();
-BrowserManagerProvider.Initialize(browserManager);
-#pragma warning restore CS0618
+await BrowserManagerProvider.InitializeAsync(browserManager).ConfigureAwait(false);
 
 var fileArgument = new Argument<FileInfo>(
     name: "file",
@@ -136,7 +134,7 @@ validateCommand.SetHandler((FileInfo file) =>
         Environment.ExitCode = 1;
         return;
     }
-    catch (Exception ex)
+    catch (Exception ex) when (ex is ArgumentException or InvalidOperationException or FileNotFoundException)
     {
         Console.WriteLine($"✗ Parse error: {ex.Message}");
         Environment.ExitCode = 1;
@@ -195,7 +193,7 @@ runCommand.SetHandler(async (FileInfo file, FileInfo? output, string? format, st
     {
         document = loader.LoadFromFile(file.FullName);
     }
-    catch (Exception ex)
+    catch (Exception ex) when (ex is ArgumentException or InvalidOperationException or FileNotFoundException)
     {
         Console.WriteLine($"Ошибка загрузки workflow: {ex.Message}");
         Environment.ExitCode = 1;
@@ -833,7 +831,7 @@ graphCommand.SetHandler((FileInfo file) =>
         Console.WriteLine("```");
         Environment.ExitCode = 0;
     }
-    catch (Exception ex)
+    catch (Exception ex) when (ex is ArgumentException or InvalidOperationException or FileNotFoundException)
     {
         Console.WriteLine($"✗ Parse error: {ex.Message}");
         Environment.ExitCode = 1;

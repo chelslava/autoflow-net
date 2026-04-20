@@ -280,7 +280,7 @@ public sealed class HttpRequestKeyword : IKeywordHandler<HttpRequestArgs>
         }
 
         var workingDirectory = Path.GetFullPath(Directory.GetCurrentDirectory());
-        var fullPath = Path.GetFullPath(Path.Combine(workingDirectory, path));
+        var fullPath = Path.GetFullPath(Path.Join(workingDirectory, path));
 
         var normalizedRoot = workingDirectory.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
         var normalizedFullPath = fullPath.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
@@ -309,10 +309,9 @@ public sealed class HttpRequestKeyword : IKeywordHandler<HttpRequestArgs>
             try
             {
                 var addresses = Dns.GetHostAddresses(host);
-                foreach (var addr in addresses)
+                if (addresses.Any(IsPrivateIPAddress))
                 {
-                    if (IsPrivateIPAddress(addr))
-                        return true;
+                    return true;
                 }
             }
             catch (SocketException)

@@ -235,17 +235,18 @@ public sealed class FileKeywordsTests : IDisposable
 
     private static string CreateRowXml(string[] row, int rowIndex, List<string> sharedStrings)
     {
-        return
-            $"    <row r=\"{rowIndex}\">" +
-            string.Join(
-                string.Empty,
-                row.Select((value, columnIndex) =>
-                {
-                    var cellReference = $"{GetColumnName(columnIndex)}{rowIndex}";
-                    var sharedIndex = sharedStrings.IndexOf(value);
-                    return $"<c r=\"{cellReference}\" t=\"s\"><v>{sharedIndex}</v></c>";
-                })) +
-            "</row>";
+        var builder = new System.Text.StringBuilder();
+        builder.Append($"    <row r=\"{rowIndex}\">");
+
+        foreach (var (value, columnIndex) in row.Select((item, index) => (item, index)))
+        {
+            var cellReference = $"{GetColumnName(columnIndex)}{rowIndex}";
+            var sharedIndex = sharedStrings.IndexOf(value);
+            builder.Append($"<c r=\"{cellReference}\" t=\"s\"><v>{sharedIndex}</v></c>");
+        }
+
+        builder.Append("</row>");
+        return builder.ToString();
     }
 
     private static string GetColumnName(int columnIndex)

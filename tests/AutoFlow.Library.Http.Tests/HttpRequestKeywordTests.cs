@@ -89,7 +89,7 @@ public sealed class HttpRequestKeywordTests
     [Fact]
     public async Task ExecuteAsync_SaveToFile_WritesResponseBytes()
     {
-        var tempRoot = Path.Combine(Path.GetTempPath(), $"autoflow_http_{Guid.NewGuid():N}");
+        var tempRoot = Path.Join(Path.GetTempPath(), $"autoflow_http_{Guid.NewGuid():N}");
         Directory.CreateDirectory(tempRoot);
         var previousDirectory = Directory.GetCurrentDirectory();
 
@@ -109,8 +109,9 @@ public sealed class HttpRequestKeywordTests
             var result = await keyword.ExecuteAsync(CreateContext(), args);
 
             Assert.True(result.IsSuccess);
-            Assert.True(File.Exists(Path.Combine(tempRoot, "downloads", "result.txt")));
-            Assert.Equal("file-content", await File.ReadAllTextAsync(Path.Combine(tempRoot, "downloads", "result.txt")));
+            var resultPath = Path.Join(tempRoot, "downloads", "result.txt");
+            Assert.True(File.Exists(resultPath));
+            Assert.Equal("file-content", await File.ReadAllTextAsync(resultPath));
         }
         finally
         {

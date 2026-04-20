@@ -61,7 +61,14 @@ public sealed class DatabaseHook : IWorkflowLifecycleHook
                 "Результат выполнения {WorkflowName} (RunId: {RunId}) сохранён в БД (ID: {Id})",
                 context.WorkflowName, context.RunId, id);
         }
-        catch (Exception ex)
+        catch (Exception ex) when (
+            ex is not (
+                OutOfMemoryException or
+                StackOverflowException or
+                AccessViolationException or
+                AppDomainUnloadedException or
+                BadImageFormatException or
+                CannotUnloadAppDomainException))
         {
             _logger.LogError(ex, "Ошибка при сохранении результата в БД");
         }

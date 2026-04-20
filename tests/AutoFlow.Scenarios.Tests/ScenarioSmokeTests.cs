@@ -97,8 +97,8 @@ public sealed class ScenarioSmokeTests
             var reportsDirectory = ScenarioTestHarness.GetPath("reports", "scenario-tests");
             Directory.CreateDirectory(reportsDirectory);
 
-            var jsonPath = Path.Combine(reportsDirectory, $"report-{Guid.NewGuid():N}.json");
-            var htmlPath = Path.Combine(reportsDirectory, $"report-{Guid.NewGuid():N}.html");
+            var jsonPath = Path.Join(reportsDirectory, $"report-{Guid.NewGuid():N}.json");
+            var htmlPath = Path.Join(reportsDirectory, $"report-{Guid.NewGuid():N}.html");
 
             await File.WriteAllTextAsync(jsonPath, host.JsonReportGenerator.Generate(result));
             await File.WriteAllTextAsync(htmlPath, host.HtmlReportGenerator.Generate(result));

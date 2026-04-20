@@ -20,7 +20,7 @@ public sealed class SQLiteExecutionRepositoryTests : IAsyncLifetime
 
     public SQLiteExecutionRepositoryTests()
     {
-        _dbPath = Path.Combine(Path.GetTempPath(), $"autoflow_test_{Guid.NewGuid():N}.db");
+        _dbPath = Path.Join(Path.GetTempPath(), $"autoflow_test_{Guid.NewGuid():N}.db");
         var loggerFactory = LoggerFactory.Create(b => b.AddConsole());
         var logger = loggerFactory.CreateLogger<SQLiteExecutionRepository>();
         _repository = new SQLiteExecutionRepository(_dbPath, logger);
@@ -42,7 +42,11 @@ public sealed class SQLiteExecutionRepositoryTests : IAsyncLifetime
                     File.Delete(_dbPath);
                 break;
             }
-            catch
+            catch (IOException)
+            {
+                await Task.Delay(200);
+            }
+            catch (UnauthorizedAccessException)
             {
                 await Task.Delay(200);
             }

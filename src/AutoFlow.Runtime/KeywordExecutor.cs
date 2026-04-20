@@ -57,7 +57,7 @@ public sealed class KeywordExecutor
         {
             handler = _serviceProvider.GetRequiredService(registration.HandlerType);
         }
-        catch (Exception ex)
+        catch (InvalidOperationException ex)
         {
             return KeywordResult.Failure(
                 $"Failed to resolve handler for keyword '{keywordName}' in step '{stepId}': {ex.Message}. " +
@@ -79,7 +79,7 @@ public sealed class KeywordExecutor
         {
             typedArgs = BindArgs(rawArgs, registration.ArgsType) ?? Activator.CreateInstance(registration.ArgsType)!;
         }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is InvalidOperationException or NotSupportedException or System.Text.Json.JsonException or ArgumentException)
         {
             var maskedArgs = MaskSensitiveData(rawArgs);
             return KeywordResult.Failure(
@@ -109,7 +109,7 @@ public sealed class KeywordExecutor
 
             typedTask = resultTask;
         }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is InvalidOperationException or ArgumentException or System.Reflection.TargetInvocationException)
         {
             var innerEx = ex is System.Reflection.TargetInvocationException tie ? tie.InnerException : ex;
             return KeywordResult.Failure(

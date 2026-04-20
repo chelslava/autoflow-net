@@ -133,7 +133,14 @@ public sealed class RuntimeEngine : IRuntimeEngine
                 document.Name, runId);
             await _hookRunner.OnErrorAsync(workflowContext, ex).ConfigureAwait(false);
         }
-        catch (Exception ex)
+        catch (Exception ex) when (
+            ex is not (
+                OutOfMemoryException or
+                StackOverflowException or
+                AccessViolationException or
+                AppDomainUnloadedException or
+                BadImageFormatException or
+                CannotUnloadAppDomainException))
         {
             runResult.Status = ExecutionStatus.Failed;
             _logger.LogError(ex, "Workflow {WorkflowName} unexpected error (RunId: {RunId}) - {Duration}ms",
@@ -152,7 +159,6 @@ public sealed class RuntimeEngine : IRuntimeEngine
                 document.Name, runId, runResult.Status, (long)durationMs);
             
             workflowSpan?.SetStatus(runResult.Status == ExecutionStatus.Passed ? ActivityStatusCode.Ok : ActivityStatusCode.Error);
-            workflowSpan?.Dispose();
             
             await _hookRunner.OnWorkflowEndAsync(workflowContext, runResult).ConfigureAwait(false);
             await _hookRunner.OnAfterWorkflowEndAsync(workflowContext, runResult).ConfigureAwait(false);
@@ -180,7 +186,14 @@ public sealed class RuntimeEngine : IRuntimeEngine
             _logger.LogWarning("Task execution cancelled");
             throw;
         }
-        catch (Exception ex)
+        catch (Exception ex) when (
+            ex is not (
+                OutOfMemoryException or
+                StackOverflowException or
+                AccessViolationException or
+                AppDomainUnloadedException or
+                BadImageFormatException or
+                CannotUnloadAppDomainException))
         {
             taskException = ex;
             runResult.Status = ExecutionStatus.Failed;
@@ -203,10 +216,17 @@ public sealed class RuntimeEngine : IRuntimeEngine
                 {
                     await ExecuteNodes(task.Finally.Steps, document, context, runResult, workflowContext, cancellationToken).ConfigureAwait(false);
                 }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Ошибка в finally блоке");
-            }
+                catch (Exception ex) when (
+                    ex is not (
+                        OutOfMemoryException or
+                        StackOverflowException or
+                        AccessViolationException or
+                        AppDomainUnloadedException or
+                        BadImageFormatException or
+                        CannotUnloadAppDomainException))
+                {
+                    _logger.LogError(ex, "Ошибка в finally блоке");
+                }
             }
         }
 
@@ -415,7 +435,14 @@ public sealed class RuntimeEngine : IRuntimeEngine
                 HandleStepFailure(step, stepResult, runResult);
                 break;
             }
-            catch (Exception ex)
+            catch (Exception ex) when (
+                ex is not (
+                    OutOfMemoryException or
+                    StackOverflowException or
+                    AccessViolationException or
+                    AppDomainUnloadedException or
+                    BadImageFormatException or
+                    CannotUnloadAppDomainException))
             {
                 _logger.LogError(ex, "Ошибка при выполнении шага {StepId} (попытка {Attempt}/{Max}).",
                     step.Id, attempt, maxAttempts);
@@ -536,7 +563,14 @@ public sealed class RuntimeEngine : IRuntimeEngine
 
                 await ExecuteNode(node, document, context, runResult, workflowContext, cancellationToken).ConfigureAwait(false);
             }
-            catch (Exception ex)
+            catch (Exception ex) when (
+                ex is not (
+                    OutOfMemoryException or
+                    StackOverflowException or
+                    AccessViolationException or
+                    AppDomainUnloadedException or
+                    BadImageFormatException or
+                    CannotUnloadAppDomainException))
             {
                 exceptions.Add(ex);
                 failed = true;

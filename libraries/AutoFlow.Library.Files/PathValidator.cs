@@ -41,9 +41,7 @@ public static class PathValidator
             }
             else
             {
-#pragma warning disable CA5360
-                var resolvedPath = Path.Combine(allowedBase, decodedPath);
-#pragma warning restore CA5360
+                var resolvedPath = Path.Join(allowedBase, decodedPath);
                 fullPath = Path.GetFullPath(resolvedPath);
             }
 
@@ -68,8 +66,13 @@ public static class PathValidator
         {
             decoded = Uri.UnescapeDataString(path);
         }
-        catch
+        catch (ArgumentException)
         {
+            decoded = path;
+        }
+        catch (UriFormatException)
+        {
+            decoded = path;
         }
 
         decoded = decoded.Replace('\\', '/');
@@ -89,11 +92,8 @@ public static class PathValidator
             "//"
         };
 
-        foreach (var pattern in patterns)
-        {
-            if (normalized.Contains(pattern))
-                return true;
-        }
+        if (patterns.Any(normalized.Contains))
+            return true;
 
         if (normalized.StartsWith("./") || normalized.StartsWith("~/"))
             return true;

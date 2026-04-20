@@ -109,7 +109,7 @@ internal static class ScenarioTestHarness
         }
     }
 
-    public static string GetPath(params string[] segments) => Path.Combine([RepoRoot, .. segments]);
+    public static string GetPath(params string[] segments) => Path.Join([RepoRoot, .. segments]);
 
     private static string FindRepoRoot()
     {
@@ -117,7 +117,7 @@ internal static class ScenarioTestHarness
 
         while (directory is not null)
         {
-            if (File.Exists(Path.Combine(directory.FullName, "AutoFlow.sln")))
+            if (File.Exists(Path.Join(directory.FullName, "AutoFlow.sln")))
             {
                 return directory.FullName;
             }

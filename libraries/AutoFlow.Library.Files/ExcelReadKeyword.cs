@@ -98,29 +98,29 @@ public sealed class ExcelReadKeyword : IKeywordHandler<ExcelReadArgs>
             throw new InvalidDataException("Excel worksheet does not contain any headers.");
         }
 
-        var rows = new List<Dictionary<string, object?>>();
+        return rowElements
+            .Skip(1)
+            .Select(rowElement => CreateRow(rowElement, sharedStrings, headerMap))
+            .Where(row => !skipEmptyRows || row.Values.Any(value => !string.IsNullOrWhiteSpace(value?.ToString())))
+            .ToList();
+    }
 
-        foreach (var rowElement in rowElements.Skip(1))
+    private static Dictionary<string, object?> CreateRow(
+        XElement rowElement,
+        IReadOnlyList<string> sharedStrings,
+        IReadOnlyDictionary<int, string> headerMap)
+    {
+        var rowValues = ReadRowValues(rowElement, sharedStrings, false);
+        var row = new Dictionary<string, object?>(StringComparer.OrdinalIgnoreCase);
+
+        foreach (var (columnIndex, headerName) in headerMap)
         {
-            var rowValues = ReadRowValues(rowElement, sharedStrings, false);
-            var row = new Dictionary<string, object?>(StringComparer.OrdinalIgnoreCase);
-
-            foreach (var (columnIndex, headerName) in headerMap)
-            {
-                row[headerName] = rowValues.TryGetValue(columnIndex, out var value)
-                    ? value
-                    : string.Empty;
-            }
-
-            if (skipEmptyRows && row.Values.All(value => string.IsNullOrWhiteSpace(value?.ToString())))
-            {
-                continue;
-            }
-
-            rows.Add(row);
+            row[headerName] = rowValues.TryGetValue(columnIndex, out var value)
+                ? value
+                : string.Empty;
         }
 
-        return rows;
+        return row;
     }
 
     private static Dictionary<int, string> BuildHeaderMap(Dictionary<int, string> headerValues)

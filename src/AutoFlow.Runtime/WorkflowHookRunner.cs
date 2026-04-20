@@ -40,7 +40,14 @@ public sealed class WorkflowHookRunner
             {
                 await hook.OnWorkflowStartAsync(ctx).ConfigureAwait(false);
             }
-            catch (Exception ex)
+            catch (Exception ex) when (
+                ex is not (
+                    OutOfMemoryException or
+                    StackOverflowException or
+                    AccessViolationException or
+                    AppDomainUnloadedException or
+                    BadImageFormatException or
+                    CannotUnloadAppDomainException))
             {
                 _logger.LogError(ex, "Ошибка в hook {HookType}.OnWorkflowStartAsync", hook.GetType().Name);
             }
@@ -56,7 +63,14 @@ public sealed class WorkflowHookRunner
             {
                 await hook.OnWorkflowEndAsync(ctx, result).ConfigureAwait(false);
             }
-            catch (Exception ex)
+            catch (Exception ex) when (
+                ex is not (
+                    OutOfMemoryException or
+                    StackOverflowException or
+                    AccessViolationException or
+                    AppDomainUnloadedException or
+                    BadImageFormatException or
+                    CannotUnloadAppDomainException))
             {
                 _logger.LogError(ex, "Ошибка в hook {HookType}.OnWorkflowEndAsync", hook.GetType().Name);
             }
@@ -72,7 +86,14 @@ public sealed class WorkflowHookRunner
             {
                 await hook.OnAfterWorkflowEndAsync(ctx, result).ConfigureAwait(false);
             }
-            catch (Exception ex)
+            catch (Exception ex) when (
+                ex is not (
+                    OutOfMemoryException or
+                    StackOverflowException or
+                    AccessViolationException or
+                    AppDomainUnloadedException or
+                    BadImageFormatException or
+                    CannotUnloadAppDomainException))
             {
                 _logger.LogError(ex, "Ошибка в hook {HookType}.OnAfterWorkflowEndAsync", hook.GetType().Name);
             }
@@ -88,7 +109,14 @@ public sealed class WorkflowHookRunner
             {
                 await hook.OnStepStartAsync(ctx).ConfigureAwait(false);
             }
-            catch (Exception ex)
+            catch (Exception ex) when (
+                ex is not (
+                    OutOfMemoryException or
+                    StackOverflowException or
+                    AccessViolationException or
+                    AppDomainUnloadedException or
+                    BadImageFormatException or
+                    CannotUnloadAppDomainException))
             {
                 _logger.LogError(ex, "Ошибка в hook {HookType}.OnStepStartAsync", hook.GetType().Name);
             }
@@ -104,7 +132,14 @@ public sealed class WorkflowHookRunner
             {
                 await hook.OnStepEndAsync(ctx, result).ConfigureAwait(false);
             }
-            catch (Exception ex)
+            catch (Exception ex) when (
+                ex is not (
+                    OutOfMemoryException or
+                    StackOverflowException or
+                    AccessViolationException or
+                    AppDomainUnloadedException or
+                    BadImageFormatException or
+                    CannotUnloadAppDomainException))
             {
                 _logger.LogError(ex, "Ошибка в hook {HookType}.OnStepEndAsync", hook.GetType().Name);
             }
@@ -120,7 +155,14 @@ public sealed class WorkflowHookRunner
             {
                 await hook.OnErrorAsync(ctx, ex).ConfigureAwait(false);
             }
-            catch (Exception hookEx)
+            catch (Exception hookEx) when (
+                hookEx is not (
+                    OutOfMemoryException or
+                    StackOverflowException or
+                    AccessViolationException or
+                    AppDomainUnloadedException or
+                    BadImageFormatException or
+                    CannotUnloadAppDomainException))
             {
                 _logger.LogError(hookEx, "Ошибка в hook {HookType}.OnErrorAsync", hook.GetType().Name);
             }

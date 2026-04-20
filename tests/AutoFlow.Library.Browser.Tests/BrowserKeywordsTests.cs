@@ -16,10 +16,10 @@ public sealed class BrowserKeywordsTests : IAsyncLifetime
 
     public Task InitializeAsync()
     {
-        _tempDirectory = Path.Combine(Path.GetTempPath(), $"autoflow_browser_{Guid.NewGuid():N}");
+        _tempDirectory = Path.Join(Path.GetTempPath(), $"autoflow_browser_{Guid.NewGuid():N}");
         Directory.CreateDirectory(_tempDirectory);
 
-        _pagePath = Path.Combine(_tempDirectory, "test-page.html");
+        _pagePath = Path.Join(_tempDirectory, "test-page.html");
         _pageUrl = new Uri(_pagePath).AbsoluteUri;
 
         File.WriteAllText(
@@ -205,8 +205,8 @@ public sealed class BrowserKeywordsTests : IAsyncLifetime
         });
 
         var browserId = GetOutput<string>(openResult, "browserId");
-        var pageScreenshotPath = Path.Combine(_tempDirectory, "page.png");
-        var elementScreenshotPath = Path.Combine(_tempDirectory, "element.png");
+        var pageScreenshotPath = Path.Join(_tempDirectory, "page.png");
+        var elementScreenshotPath = Path.Join(_tempDirectory, "element.png");
 
         try
         {
@@ -289,7 +289,8 @@ public sealed class BrowserKeywordsTests : IAsyncLifetime
 
         if (typeof(T) == typeof(string))
         {
-            return (T)(object)value.ToString()!;
+            object converted = value.ToString()!;
+            return (T)converted;
         }
 
         return (T)Convert.ChangeType(value, typeof(T));
