@@ -10,6 +10,7 @@ public sealed class WorkflowLoader
 {
     private readonly IWorkflowParser _parser;
     private readonly HashSet<string> _loadedFiles = new(StringComparer.OrdinalIgnoreCase);
+    private string _rootDirectory = string.Empty;
 
     public WorkflowLoader(IWorkflowParser parser)
     {
@@ -27,6 +28,7 @@ public sealed class WorkflowLoader
             throw new FileNotFoundException($"Workflow файл не найден: {absolutePath}");
 
         _loadedFiles.Clear();
+        _rootDirectory = Path.GetDirectoryName(absolutePath) ?? Directory.GetCurrentDirectory();
         return LoadWithImports(absolutePath);
     }
 
@@ -110,25 +112,21 @@ public sealed class WorkflowLoader
                 "Use relative paths within the workflow directory.");
         }
 
-        // Reject path traversal patterns
-        if (importPath.Contains("..") || importPath.Contains("~"))
+        if (importPath.Contains("~"))
         {
             throw new InvalidOperationException(
-                $"Path traversal detected in import: '{importPath}'. " +
-                "Imports must not contain '..' or '~'.");
+                $"Home directory path not allowed in import: '{importPath}'.");
         }
 
         var resolvedPath = Path.GetFullPath(Path.Join(baseDirectory, importPath));
 
-        // Verify resolved path is within base directory
-        var normalizedBase = NormalizePath(baseDirectory);
+        var normalizedRoot = NormalizePath(_rootDirectory);
         var normalizedResolved = NormalizePath(resolvedPath);
 
-        if (!normalizedResolved.StartsWith(normalizedBase, StringComparison.OrdinalIgnoreCase))
+        if (!normalizedResolved.StartsWith(normalizedRoot, StringComparison.OrdinalIgnoreCase))
         {
             throw new InvalidOperationException(
-                $"Import path '{importPath}' is outside allowed directory '{baseDirectory}'. " +
-                "Imports must be within the workflow file's directory tree.");
+                $"Import path '{importPath}' is outside workflow root directory.");
         }
 
         if (!File.Exists(resolvedPath))

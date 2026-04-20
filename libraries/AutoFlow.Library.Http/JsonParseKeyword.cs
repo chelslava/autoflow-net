@@ -29,7 +29,7 @@ public sealed class JsonParseKeyword : IKeywordHandler<JsonParseArgs>
 
             if (string.IsNullOrWhiteSpace(args.Path))
             {
-                var value = JsonSerializer.Deserialize<object>(json);
+                var value = ConvertJsonElement(root);
                 return Task.FromResult(
                     KeywordResult.Success(
                         new { value },
@@ -90,8 +90,8 @@ public sealed class JsonParseKeyword : IKeywordHandler<JsonParseArgs>
                 JsonValueKind.True => true,
                 JsonValueKind.False => false,
                 JsonValueKind.Null => null,
-                JsonValueKind.Object => JsonSerializer.Deserialize<object>(current.GetRawText()),
-                JsonValueKind.Array => JsonSerializer.Deserialize<object[]>(current.GetRawText()),
+                JsonValueKind.Object => ConvertJsonElement(current),
+                JsonValueKind.Array => ConvertJsonElement(current),
                 _ => current.ToString()
             };
 
@@ -109,5 +109,27 @@ public sealed class JsonParseKeyword : IKeywordHandler<JsonParseArgs>
             return Task.FromResult(
                 KeywordResult.Failure($"JSON parse error: {ex.Message}"));
         }
+    }
+
+    private static object? ConvertJsonElement(JsonElement element)
+    {
+        return element.ValueKind switch
+        {
+            JsonValueKind.Object => element.EnumerateObject()
+                .ToDictionary(property => property.Name, property => ConvertJsonElement(property.Value)),
+            JsonValueKind.Array => element.EnumerateArray()
+                .Select(ConvertJsonElement)
+                .ToList(),
+            JsonValueKind.String => element.GetString(),
+            JsonValueKind.Number => element.TryGetInt32(out var intValue)
+                ? intValue
+                : element.TryGetInt64(out var longValue)
+                    ? longValue
+                    : element.GetDouble(),
+            JsonValueKind.True => true,
+            JsonValueKind.False => false,
+            JsonValueKind.Null => null,
+            _ => element.ToString()
+        };
     }
 }

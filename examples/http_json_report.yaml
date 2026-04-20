@@ -1,0 +1,74 @@
+schema_version: 1
+name: http_json_report_demo
+
+variables:
+  todo_url: "https://jsonplaceholder.typicode.com/todos/1"
+  report_path: "output/http_json_report/todo_report.txt"
+
+tasks:
+  main:
+    steps:
+      - step:
+          id: fetch_todo
+          uses: http.request
+          with:
+            url: "${todo_url}"
+            method: GET
+          save_as:
+            body: todo_json
+            statusCode: todo_status
+
+      - step:
+          id: parse_title
+          uses: json.parse
+          with:
+            json: "${todo_json}"
+            path: "title"
+          save_as:
+            value: todo_title
+
+      - step:
+          id: parse_completed
+          uses: json.parse
+          with:
+            json: "${todo_json}"
+            path: "completed"
+          save_as:
+            value: todo_completed
+
+      - if:
+          id: log_state
+          condition:
+            eq:
+              - "${todo_completed}"
+              - false
+          then:
+            - step:
+                id: log_pending
+                uses: log.info
+                with:
+                  message: "Todo is still pending: ${todo_title}"
+          else:
+            - step:
+                id: log_done
+                uses: log.info
+                with:
+                  message: "Todo is already completed: ${todo_title}"
+
+      - step:
+          id: write_report
+          uses: files.write
+          with:
+            path: "${report_path}"
+            content: |
+              HTTP + JSON example
+              URL: ${todo_url}
+              Status: ${todo_status}
+              Title: ${todo_title}
+              Completed: ${todo_completed}
+
+      - step:
+          id: log_complete
+          uses: log.info
+          with:
+            message: "HTTP JSON report created: ${report_path}"

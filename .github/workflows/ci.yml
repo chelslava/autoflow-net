@@ -37,13 +37,26 @@ jobs:
         run: dotnet build --no-restore --configuration Release
 
       - name: Test
-        run: dotnet test --no-build --configuration Release --filter "FullyQualifiedName!~Browser" --collect:"XPlat Code Coverage"
+        run: |
+          projects=(
+            "tests/AutoFlow.Validation.Tests/AutoFlow.Validation.Tests.csproj"
+            "tests/AutoFlow.Parser.Tests/AutoFlow.Parser.Tests.csproj"
+            "tests/AutoFlow.Runtime.Tests/AutoFlow.Runtime.Tests.csproj"
+            "tests/AutoFlow.Library.Files.Tests/AutoFlow.Library.Files.Tests.csproj"
+            "tests/AutoFlow.Library.Http.Tests/AutoFlow.Library.Http.Tests.csproj"
+            "tests/AutoFlow.Database.Tests/AutoFlow.Database.Tests.csproj"
+            "tests/AutoFlow.Reporting.Tests/AutoFlow.Reporting.Tests.csproj"
+          )
+          for project in "${projects[@]}"; do
+            echo "Testing $project"
+            dotnet test "$project" --no-build --configuration Release --collect:"XPlat Code Coverage"
+          done
 
       - name: Upload coverage
         uses: actions/upload-artifact@v4
         with:
           name: coverage
-          path: ./TestResults/*/coverage.cobertura.xml
+          path: ./**/TestResults/*/coverage.cobertura.xml
           retention-days: 7
 
       - name: Publish Linux-x64
@@ -85,19 +98,115 @@ jobs:
       - name: Validate example workflows
         run: |
           validation_failed=false
-          for file in examples/*.yaml; do
-            if [[ "$file" != *"browser"* ]]; then
-              echo "Validating $file"
-              if ! dotnet run --project src/AutoFlow.Cli -c Release -- validate "$file"; then
-                validation_failed=true
-                echo "::warning::Validation failed for $file"
-              fi
+          files=(
+            "examples/flow.yaml"
+            "examples/advanced_flow.yaml"
+            "examples/advanced_features.yaml"
+            "examples/file_roundtrip.yaml"
+            "examples/http_json_report.yaml"
+            "examples/excel_summary.yaml"
+            "examples/imports/main.yaml"
+            "examples/imports_report.yaml"
+            "examples/parallel_fetch_report.yaml"
+            "examples/report_cli_demo.yaml"
+            "examples/browser_login.yaml"
+            "examples/browser_ecommerce.yaml"
+            "examples/rpa_challenge.yaml"
+            "examples/rpa_challenge_reframework.yaml"
+            "examples/reframework/main.yaml"
+          )
+          for file in "${files[@]}"; do
+            echo "Validating $file"
+            if ! dotnet run --project src/AutoFlow.Cli -c Release -- validate "$file"; then
+              validation_failed=true
+              echo "::warning::Validation failed for $file"
             fi
           done
           if [ "$validation_failed" = true ]; then
             echo "::error::One or more workflow validations failed"
             exit 1
           fi
+
+  scenario-tests:
+    needs: build-test
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      - name: Cache NuGet packages
+        uses: actions/cache@v4
+        with:
+          path: ~/.nuget/packages
+          key: ${{ runner.os }}-nuget-${{ hashFiles('**/Directory.Packages.props', '**/*.csproj') }}
+          restore-keys: |
+            ${{ runner.os }}-nuget-
+
+      - name: Restore
+        run: dotnet restore
+
+      - name: Build
+        run: dotnet build --no-restore --configuration Release
+
+      - name: Run scenario tests
+        env:
+          CI: "1"
+        run: dotnet test tests/AutoFlow.Scenarios.Tests/AutoFlow.Scenarios.Tests.csproj --no-build --configuration Release --filter "Category=Scenario|Category=ExternalScenario" --collect:"XPlat Code Coverage"
+
+      - name: Upload scenario coverage
+        uses: actions/upload-artifact@v4
+        with:
+          name: scenario-coverage
+          path: ./**/TestResults/*/coverage.cobertura.xml
+          retention-days: 7
+
+  browser-tests:
+    needs: build-test
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      - name: Cache NuGet packages
+        uses: actions/cache@v4
+        with:
+          path: ~/.nuget/packages
+          key: ${{ runner.os }}-nuget-${{ hashFiles('**/Directory.Packages.props', '**/*.csproj') }}
+          restore-keys: |
+            ${{ runner.os }}-nuget-
+
+      - name: Restore
+        run: dotnet restore
+
+      - name: Build
+        run: dotnet build --no-restore --configuration Release
+
+      - name: Install Playwright Chromium
+        run: pwsh tests/AutoFlow.Library.Browser.Tests/bin/Release/net10.0/playwright.ps1 install --with-deps chromium
+
+      - name: Run browser integration tests
+        env:
+          CI: "1"
+        run: dotnet test tests/AutoFlow.Library.Browser.Tests/AutoFlow.Library.Browser.Tests.csproj --configuration Release --filter "Category=Browser" --collect:"XPlat Code Coverage"
+
+      - name: Upload browser coverage
+        uses: actions/upload-artifact@v4
+        with:
+          name: browser-coverage
+          path: ./**/TestResults/*/coverage.cobertura.xml
+          retention-days: 7
 
   # lint:
   #   runs-on: ubuntu-latest

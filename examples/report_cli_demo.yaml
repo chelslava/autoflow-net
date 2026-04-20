@@ -1,0 +1,51 @@
+schema_version: 1
+name: report_cli_demo
+
+variables:
+  output_path: "output/report_cli_demo/data.txt"
+
+tasks:
+  main:
+    on_error:
+      - step:
+          id: on_error
+          uses: log.info
+          with:
+            message: "Something went wrong during report_cli_demo"
+
+    finally:
+      - step:
+          id: finally_log
+          uses: log.info
+          with:
+            message: "report_cli_demo finished"
+
+    steps:
+      - step:
+          id: timestamp
+          uses: datetime.now
+          with:
+            format: "yyyy-MM-dd HH:mm:ss"
+          save_as:
+            value: now_value
+
+      - step:
+          id: write_file
+          uses: files.write
+          with:
+            path: "${output_path}"
+            content: "Generated at ${now_value}"
+
+      - step:
+          id: read_file
+          uses: files.read
+          with:
+            path: "${output_path}"
+          save_as:
+            content: file_content
+
+      - step:
+          id: log_content
+          uses: log.info
+          with:
+            message: "Report CLI example content: ${file_content}"

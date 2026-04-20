@@ -118,26 +118,28 @@ validateCommand.SetHandler((FileInfo file) =>
     if (!file.Exists)
     {
         Console.WriteLine($"Ошибка: Файл не найден: {file.FullName}");
+        Environment.ExitCode = 1;
         return;
     }
 
-    var parser = host.Services.GetRequiredService<IWorkflowParser>();
-    var yaml = File.ReadAllText(file.FullName);
+    var loader = host.Services.GetRequiredService<WorkflowLoader>();
 
     WorkflowDocument document;
     try
     {
-        document = parser.Parse(yaml);
+        document = loader.LoadFromFile(file.FullName);
     }
     catch (YamlDotNet.Core.YamlException yamlEx)
     {
         Console.WriteLine($"✗ YAML parse error:");
         Console.WriteLine($"  Line {yamlEx.Start.Line}, Column {yamlEx.Start.Column}: {yamlEx.Message}");
+        Environment.ExitCode = 1;
         return;
     }
     catch (Exception ex)
     {
         Console.WriteLine($"✗ Parse error: {ex.Message}");
+        Environment.ExitCode = 1;
         return;
     }
 
@@ -147,6 +149,7 @@ validateCommand.SetHandler((FileInfo file) =>
     if (result.IsValid)
     {
         Console.WriteLine($"✓ Валидация пройдена: {file.Name}");
+        Environment.ExitCode = 0;
     }
     else
     {
@@ -159,6 +162,7 @@ validateCommand.SetHandler((FileInfo file) =>
             if (error.Suggestion is not null)
                 Console.WriteLine($"    Suggestion: {error.Suggestion}");
         }
+        Environment.ExitCode = 1;
     }
 }, fileArgument);
 
@@ -178,6 +182,7 @@ runCommand.SetHandler(async (FileInfo file, FileInfo? output, string? format, st
     if (!file.Exists)
     {
         Console.WriteLine($"Ошибка: Файл не найден: {file.FullName}");
+        Environment.ExitCode = 1;
         return;
     }
 
@@ -193,6 +198,7 @@ runCommand.SetHandler(async (FileInfo file, FileInfo? output, string? format, st
     catch (Exception ex)
     {
         Console.WriteLine($"Ошибка загрузки workflow: {ex.Message}");
+        Environment.ExitCode = 1;
         return;
     }
 
@@ -206,6 +212,7 @@ runCommand.SetHandler(async (FileInfo file, FileInfo? output, string? format, st
         {
             Console.WriteLine($"  [{error.Code}] {error.Message}");
         }
+        Environment.ExitCode = 1;
         return;
     }
 
@@ -232,6 +239,7 @@ runCommand.SetHandler(async (FileInfo file, FileInfo? output, string? format, st
 
         Console.WriteLine();
         Console.WriteLine("✓ Dry run completed successfully. Workflow is valid and ready to execute.");
+        Environment.ExitCode = 0;
         return;
     }
 
@@ -266,6 +274,7 @@ runCommand.SetHandler(async (FileInfo file, FileInfo? output, string? format, st
     {
         Console.WriteLine();
         Console.WriteLine("✗ Workflow cancelled by user");
+        Environment.ExitCode = 1;
         return;
     }
 
@@ -284,12 +293,14 @@ runCommand.SetHandler(async (FileInfo file, FileInfo? output, string? format, st
         if (!normalizedOutput.StartsWith(workingDirectory, StringComparison.OrdinalIgnoreCase))
         {
             Console.WriteLine($"Ошибка: --output должен быть внутри рабочей директории: {workingDirectory}");
+            Environment.ExitCode = 1;
             return;
         }
         
         if (normalizedOutput.Contains(".."))
         {
             Console.WriteLine("Ошибка: --output не может содержать path traversal (../)");
+            Environment.ExitCode = 1;
             return;
         }
         
@@ -305,6 +316,8 @@ runCommand.SetHandler(async (FileInfo file, FileInfo? output, string? format, st
         await File.WriteAllTextAsync(normalizedOutput, reportContent);
         Console.WriteLine($"  Отчёт ({reportFormat}): {normalizedOutput}");
     }
+
+    Environment.ExitCode = result.Status == ExecutionStatus.Passed ? 0 : 1;
 }, fileArgument, outputOption, outputFormatOption, runIdOption, dryRunOption);
 
 static int CountSteps(List<IWorkflowNode> nodes)
@@ -796,14 +809,14 @@ graphCommand.SetHandler((FileInfo file) =>
     if (!file.Exists)
     {
         Console.WriteLine($"✗ File not found: {file.FullName}");
+        Environment.ExitCode = 1;
         return;
     }
 
     try
     {
-        var parser = host.Services.GetRequiredService<IWorkflowParser>();
-        var yaml = File.ReadAllText(file.FullName);
-        var document = parser.Parse(yaml);
+        var loader = host.Services.GetRequiredService<WorkflowLoader>();
+        var document = loader.LoadFromFile(file.FullName);
         
         Console.WriteLine("```mermaid");
         Console.WriteLine("flowchart TD");
@@ -818,10 +831,12 @@ graphCommand.SetHandler((FileInfo file) =>
         
         Console.WriteLine("    end");
         Console.WriteLine("```");
+        Environment.ExitCode = 0;
     }
     catch (Exception ex)
     {
         Console.WriteLine($"✗ Parse error: {ex.Message}");
+        Environment.ExitCode = 1;
     }
 }, graphFileArgument);
 

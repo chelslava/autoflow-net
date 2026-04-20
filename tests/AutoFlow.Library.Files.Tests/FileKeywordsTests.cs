@@ -1,5 +1,6 @@
 using System;
 using System.IO;
+using System.IO.Compression;
 using System.Threading;
 using System.Threading.Tasks;
 using AutoFlow.Abstractions;
@@ -130,4 +131,142 @@ public sealed class FileKeywordsTests : IDisposable
     }
 
     #endregion
+
+    #region ExcelRead Tests
+
+    [Fact]
+    public async Task ExcelRead_ValidWorkbook_ReturnsRowsFromFirstWorksheet()
+    {
+        var workbookPath = Path.Join(_testDir, "employees.xlsx");
+        CreateWorkbook(
+            workbookPath,
+            [
+                ["First Name", "Last Name ", "Phone Number"],
+                ["John", "Smith", "40716543298"],
+                ["Jane", "Dorsey", "40791345621"],
+                ["", "", ""]
+            ]);
+
+        var keyword = new ExcelReadKeyword();
+        var args = new ExcelReadArgs { Path = "employees.xlsx", BasePath = _testDir };
+
+        var result = await keyword.ExecuteAsync(CreateContext(), args);
+
+        Assert.True(result.IsSuccess);
+
+        var outputs = result.Outputs!;
+        var count = (int)outputs.GetType().GetProperty("count")!.GetValue(outputs)!;
+        var rows = (System.Collections.IEnumerable)outputs.GetType().GetProperty("rows")!.GetValue(outputs)!;
+        var firstRow = Assert.IsAssignableFrom<Dictionary<string, object?>>(rows.Cast<object>().First());
+
+        Assert.Equal(2, count);
+        Assert.Equal("John", firstRow["First Name"]);
+        Assert.Equal("Smith", firstRow["Last Name"]);
+        Assert.Equal("40716543298", firstRow["Phone Number"]);
+    }
+
+    [Fact]
+    public async Task ExcelRead_PathTraversal_ReturnsFailure()
+    {
+        var keyword = new ExcelReadKeyword();
+        var args = new ExcelReadArgs { Path = "../../../secret.xlsx", BasePath = _testDir };
+
+        var result = await keyword.ExecuteAsync(CreateContext(), args);
+
+        Assert.False(result.IsSuccess);
+    }
+
+    #endregion
+
+    private static void CreateWorkbook(string workbookPath, string[][] rows)
+    {
+        var sharedStrings = rows
+            .SelectMany(row => row)
+            .Distinct(StringComparer.Ordinal)
+            .ToList();
+
+        using var archive = ZipFile.Open(workbookPath, ZipArchiveMode.Create);
+        AddEntry(
+            archive,
+            "xl/workbook.xml",
+            """
+            <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+            <workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"
+                      xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
+              <sheets>
+                <sheet name="Sheet1" sheetId="1" r:id="rId1" />
+              </sheets>
+            </workbook>
+            """);
+        AddEntry(
+            archive,
+            "xl/_rels/workbook.xml.rels",
+            """
+            <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+            <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+              <Relationship Id="rId1"
+                            Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet"
+                            Target="worksheets/sheet1.xml" />
+            </Relationships>
+            """);
+        AddEntry(
+            archive,
+            "xl/sharedStrings.xml",
+            $"""
+            <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+            <sst xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"
+                 count="{sharedStrings.Count}"
+                 uniqueCount="{sharedStrings.Count}">
+            {string.Join(Environment.NewLine, sharedStrings.Select(value => $"  <si><t>{System.Security.SecurityElement.Escape(value)}</t></si>"))}
+            </sst>
+            """);
+        AddEntry(
+            archive,
+            "xl/worksheets/sheet1.xml",
+            $"""
+            <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+            <worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">
+              <sheetData>
+            {string.Join(Environment.NewLine, rows.Select((row, rowIndex) => CreateRowXml(row, rowIndex + 1, sharedStrings)))}
+              </sheetData>
+            </worksheet>
+            """);
+    }
+
+    private static string CreateRowXml(string[] row, int rowIndex, List<string> sharedStrings)
+    {
+        return
+            $"    <row r=\"{rowIndex}\">" +
+            string.Join(
+                string.Empty,
+                row.Select((value, columnIndex) =>
+                {
+                    var cellReference = $"{GetColumnName(columnIndex)}{rowIndex}";
+                    var sharedIndex = sharedStrings.IndexOf(value);
+                    return $"<c r=\"{cellReference}\" t=\"s\"><v>{sharedIndex}</v></c>";
+                })) +
+            "</row>";
+    }
+
+    private static string GetColumnName(int columnIndex)
+    {
+        var name = string.Empty;
+        var value = columnIndex + 1;
+
+        while (value > 0)
+        {
+            value--;
+            name = (char)('A' + (value % 26)) + name;
+            value /= 26;
+        }
+
+        return name;
+    }
+
+    private static void AddEntry(ZipArchive archive, string entryName, string content)
+    {
+        var entry = archive.CreateEntry(entryName);
+        using var writer = new StreamWriter(entry.Open());
+        writer.Write(content);
+    }
 }

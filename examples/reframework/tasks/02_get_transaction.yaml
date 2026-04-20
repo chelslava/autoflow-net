@@ -1,10 +1,6 @@
 schema_version: 1
 name: get_transaction
 
-import:
-  - config/settings.yaml
-  - lib/data.yaml
-
 tasks:
   get_transaction:
     steps:
@@ -21,74 +17,19 @@ tasks:
             message: "[GET_TRANSACTION] Retrieving transaction data"
 
       - step:
-          id: parse_employees
-          uses: json.parse
+          id: read_employees
+          uses: excel.read
           with:
-            json: '[{"firstName":"John","lastName":"Doe","company":"ACME Corp","role":"Developer","address":"123 Main St","email":"john@example.com","phone":"555-123-4567"},{"firstName":"Jane","lastName":"Smith","company":"Tech Inc","role":"Manager","address":"456 Oak Ave","email":"jane@example.com","phone":"555-987-6543"},{"firstName":"Bob","lastName":"Johnson","company":"Data Co","role":"Analyst","address":"789 Pine Rd","email":"bob@example.com","phone":"555-456-7890"}]'
+            path: "${temp_dir}/input.xlsx"
           save_as:
-            value: employees_data
+            rows: employees_data
+            count: employees_count
 
       - step:
           id: log_data_loaded
           uses: log.info
           with:
-            message: "[GET_TRANSACTION] ✓ Loaded 3 employee records"
-
-      - step:
-          id: set_employee_1
-          uses: log.info
-          with:
-            message: "John"
-          save_as:
-            value: employee_first_name
-
-      - step:
-          id: set_employee_1_last
-          uses: log.info
-          with:
-            message: "Doe"
-          save_as:
-            value: employee_last_name
-
-      - step:
-          id: set_employee_1_company
-          uses: log.info
-          with:
-            message: "ACME Corp"
-          save_as:
-            value: employee_company
-
-      - step:
-          id: set_employee_1_role
-          uses: log.info
-          with:
-            message: "Developer"
-          save_as:
-            value: employee_role
-
-      - step:
-          id: set_employee_1_address
-          uses: log.info
-          with:
-            message: "123 Main St"
-          save_as:
-            value: employee_address
-
-      - step:
-          id: set_employee_1_email
-          uses: log.info
-          with:
-            message: "john@example.com"
-          save_as:
-            value: employee_email
-
-      - step:
-          id: set_employee_1_phone
-          uses: log.info
-          with:
-            message: "555-123-4567"
-          save_as:
-            value: employee_phone
+            message: "[GET_TRANSACTION] ✓ Loaded ${employees_count} employee records from Excel"
 
       - step:
           id: log_complete

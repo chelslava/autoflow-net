@@ -2,10 +2,11 @@ schema_version: 1
 name: rpa_challenge_reframework
 
 variables:
-  challenge_url: "http://rpachallenge.com/"
-  excel_url: "http://rpachallenge.com/assets/inputFiles/input.xlsx"
+  challenge_url: "https://rpachallenge.com/"
+  excel_url: "https://rpachallenge.com/assets/downloadFiles/challenge.xlsx"
   temp_dir: "temp/rpa_challenge"
   max_retries: 3
+  result_screenshot_path: "reports/rpa_result.png"
 
 tasks:
   init:
@@ -39,7 +40,7 @@ tasks:
           uses: browser.open
           with:
             browser: chromium
-            headless: false
+            headless: true
             width: 1280
             height: 800
           save_as:
@@ -68,93 +69,85 @@ tasks:
             message: "[GET_TRANSACTION] Retrieving transaction data"
 
       - step:
-          id: parse_employees
-          uses: json.parse
+          id: read_employees
+          uses: excel.read
           with:
-            json: '[{"firstName":"John","lastName":"Doe","company":"ACME Corp","role":"Developer","address":"123 Main St","email":"john@example.com","phone":"555-123-4567"},{"firstName":"Jane","lastName":"Smith","company":"Tech Inc","role":"Manager","address":"456 Oak Ave","email":"jane@example.com","phone":"555-987-6543"},{"firstName":"Bob","lastName":"Johnson","company":"Data Co","role":"Analyst","address":"789 Pine Rd","email":"bob@example.com","phone":"555-456-7890"}]'
+            path: "${temp_dir}/input.xlsx"
           save_as:
-            value: employees_data
+            rows: employees_data
+            count: employees_count
 
   process_transaction:
+    inputs:
+      employee:
+        type: object
+        required: true
+      employee_index:
+        type: int
+        required: false
+        default: 0
     steps:
       - step:
           id: log_process_start
           uses: log.info
           with:
-            message: "[PROCESS_TRANSACTION] Starting form processing"
-
-      - step:
-          id: click_start
-          uses: browser.click
-          with:
-            browserId: "${browser_id}"
-            selector: "button.ng-binding"
-            timeoutMs: 5000
-
-      - step:
-          id: wait_form
-          uses: browser.wait
-          with:
-            browserId: "${browser_id}"
-            selector: "input[ng-model='answer']"
-            state: visible
-            timeoutMs: 5000
+            message: "[PROCESS_TRANSACTION] Processing employee ${employee_index}: ${employee.First Name} ${employee.Last Name}"
 
       - step:
           id: fill_fname
           uses: browser.fill
           with:
             browserId: "${browser_id}"
-            selector: "input[ng-model='answer'][placeholder='First Name']"
-            value: "John"
+            selector: "xpath=//label[normalize-space()='First Name']/following-sibling::input[1]"
+            value: "${employee.First Name}"
 
       - step:
           id: fill_lname
           uses: browser.fill
           with:
             browserId: "${browser_id}"
-            selector: "input[ng-model='answer'][placeholder='Last Name']"
-            value: "Doe"
+            selector: "xpath=//label[normalize-space()='Last Name']/following-sibling::input[1]"
+            value: "${employee.Last Name}"
 
       - step:
           id: fill_company
           uses: browser.fill
           with:
             browserId: "${browser_id}"
-            selector: "input[ng-model='answer'][placeholder='Company Name']"
-            value: "ACME Corp"
+            selector: "xpath=//label[normalize-space()='Company Name']/following-sibling::input[1]"
+            value: "${employee.Company Name}"
 
       - step:
           id: fill_role
           uses: browser.fill
           with:
             browserId: "${browser_id}"
-            selector: "input[ng-model='answer'][placeholder='Role in Company']"
-            value: "Developer"
+            selector: "xpath=//label[normalize-space()='Role in Company']/following-sibling::input[1]"
+            value: "${employee.Role in Company}"
 
       - step:
           id: fill_address
           uses: browser.fill
           with:
             browserId: "${browser_id}"
-            selector: "input[ng-model='answer'][placeholder='Address']"
-            value: "123 Main St"
+            selector: "xpath=//label[normalize-space()='Address']/following-sibling::input[1]"
+            value: "${employee.Address}"
 
       - step:
           id: fill_email
           uses: browser.fill
           with:
             browserId: "${browser_id}"
-            selector: "input[ng-model='answer'][placeholder='Email']"
-            value: "john@example.com"
+            selector: "xpath=//label[normalize-space()='Email']/following-sibling::input[1]"
+            value: "${employee.Email}"
 
       - step:
           id: fill_phone
           uses: browser.fill
           with:
             browserId: "${browser_id}"
-            selector: "input[ng-model='answer'][placeholder='Phone Number']"
-            value: "555-123-4567"
+            selector: "xpath=//label[normalize-space()='Phone Number']/following-sibling::input[1]"
+            value: "${employee.Phone Number}"
 
       - step:
           id: submit
@@ -162,15 +155,6 @@ tasks:
           with:
             browserId: "${browser_id}"
             selector: "input[type='submit']"
-
-      - step:
-          id: wait_result
-          uses: browser.wait
-          with:
-            browserId: "${browser_id}"
-            selector: "div.message, input[ng-model='answer']"
-            state: visible
-            timeoutMs: 3000
 
       - step:
           id: log_process_done
@@ -185,7 +169,7 @@ tasks:
           uses: browser.screenshot
           with:
             browserId: "${browser_id}"
-            path: "reports/rpa_result.png"
+            path: "${result_screenshot_path}"
             fullPage: true
 
       - step:
@@ -204,7 +188,7 @@ tasks:
           id: cleanup
           uses: files.delete
           with:
-            path: "${temp_dir}"
+            path: "${temp_dir}/input.xlsx"
 
   main:
     on_error:
@@ -234,11 +218,55 @@ tasks:
           id: ensure_cleanup
           uses: files.delete
           with:
-            path: "${temp_dir}"
+            path: "${temp_dir}/input.xlsx"
           continue_on_error: true
 
     steps:
-      - call: init
-      - call: get_transaction
-      - call: process_transaction
-      - call: end_process
+      - call:
+          id: call_init
+          task: init
+      - call:
+          id: call_get_transaction
+          task: get_transaction
+      - step:
+          id: log_loaded_rows
+          uses: log.info
+          with:
+            message: "[MAIN] Loaded ${employees_count} employee rows"
+      - step:
+          id: click_start
+          uses: browser.click
+          with:
+            browserId: "${browser_id}"
+            selector: "xpath=//button[contains(@class, 'btn-large') and normalize-space()='Start']"
+            timeoutMs: 10000
+      - step:
+          id: wait_form
+          uses: browser.wait
+          with:
+            browserId: "${browser_id}"
+            selector: "xpath=//label[normalize-space()='First Name']/following-sibling::input[1]"
+            state: visible
+            timeoutMs: 10000
+      - for_each:
+          id: process_employees
+          items: "${employees_data}"
+          as: employee
+          steps:
+            - call:
+                id: call_process_transaction
+                task: process_transaction
+                with:
+                  employee: "${employee}"
+                  employee_index: "${employee_index}"
+      - step:
+          id: assert_congratulations
+          uses: browser.assert_text
+          with:
+            browserId: "${browser_id}"
+            selector: "body"
+            expected: "Congratulations!"
+            contains: true
+      - call:
+          id: call_end_process
+          task: end_process

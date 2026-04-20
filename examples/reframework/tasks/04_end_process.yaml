@@ -1,9 +1,6 @@
 schema_version: 1
 name: end_process
 
-import:
-  - config/settings.yaml
-
 tasks:
   end_process:
     steps:
@@ -20,43 +17,33 @@ tasks:
             message: "[END_PROCESS] Finalizing workflow"
 
       - step:
+          id: get_timestamp
+          uses: datetime.now
+          with:
+            format: "yyyyMMdd_HHmmss"
+          save_as:
+            value: timestamp
+
+      - step:
+          id: create_output_dir
+          uses: files.write
+          with:
+            path: "${output_dir}/.gitkeep"
+            content: ""
+
+      - step:
           id: take_final_screenshot
           uses: browser.screenshot
           with:
             browserId: "${browser_id}"
-            path: "${reports_dir}/final_result.png"
+            path: "${output_dir}/result_${timestamp}.png"
             fullPage: true
 
       - step:
           id: log_screenshot
           uses: log.info
           with:
-            message: "[END_PROCESS] Final screenshot saved"
-
-      - step:
-          id: close_browser
-          uses: browser.close
-          with:
-            browserId: "${browser_id}"
-
-      - step:
-          id: log_browser_closed
-          uses: log.info
-          with:
-            message: "[END_PROCESS] Browser closed"
-
-      - step:
-          id: cleanup_temp
-          uses: files.delete
-          with:
-            path: "${temp_dir}"
-          continue_on_error: true
-
-      - step:
-          id: log_cleaned
-          uses: log.info
-          with:
-            message: "[END_PROCESS] Temporary files cleaned"
+            message: "[END_PROCESS] Screenshot saved: ${output_dir}/result_${timestamp}.png"
 
       - step:
           id: log_complete

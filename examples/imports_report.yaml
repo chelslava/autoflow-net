@@ -1,0 +1,51 @@
+schema_version: 1
+name: imports_report_demo
+
+imports:
+  - ./imports/common_vars.yaml
+  - ./imports/helpers.yaml
+
+variables:
+  environment: staging
+  report_path: "output/imports_report/summary.txt"
+
+tasks:
+  main:
+    steps:
+      - step:
+          id: start
+          uses: log.info
+          with:
+            message: "Running imported tasks for ${app_name} in ${environment}"
+
+      - call:
+          id: check_readme
+          task: check_file
+          with:
+            path: README.md
+
+      - call:
+          id: check_solution
+          task: check_file
+          with:
+            path: AutoFlow.sln
+
+      - step:
+          id: write_report
+          uses: files.write
+          with:
+            path: "${report_path}"
+            content: |
+              Imports example
+              App: ${app_name}
+              Environment: ${environment}
+              API base from imported vars: ${api_base}
+              Checked files:
+              - README.md
+              - AutoFlow.sln
+
+      - call:
+          id: finish
+          task: log_success
+          with:
+            message: "Imports report created: ${report_path}"

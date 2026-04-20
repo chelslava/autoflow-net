@@ -121,7 +121,48 @@ dotnet run --project src/AutoFlow.Cli -- run examples/browser_login.yaml
 
 ---
 
-## 📖 Real-world Example
+## 📖 Examples
+
+### Ready-to-run workflows in `examples/`
+
+| File | Shows |
+|------|-------|
+| `examples/flow.yaml` | Smallest possible workflow with `log.info` |
+| `examples/file_roundtrip.yaml` | Local file automation with `files.write`, `files.exists`, `files.read`, `datetime.now`, and `if` |
+| `examples/http_json_report.yaml` | HTTP request + JSON extraction + local report generation |
+| `examples/excel_summary.yaml` | Downloading an Excel file and reading rows with `excel.read` |
+| `examples/imports_report.yaml` | Focused imports example with shared variables and imported tasks |
+| `examples/parallel_fetch_report.yaml` | Focused `parallel` example that writes a summary report |
+| `examples/report_cli_demo.yaml` | Simple workflow intended for JSON/HTML report generation from the CLI |
+| `examples/advanced_flow.yaml` | `if`, `foreach`, `call`, and file reads |
+| `examples/advanced_features.yaml` | `parallel`, `retry`, `on_error`, and `finally` |
+| `examples/imports/main.yaml` | Workflow imports and reusable tasks |
+| `examples/browser_login.yaml` | Browser login flow |
+| `examples/browser_ecommerce.yaml` | Browser e-commerce scenario |
+| `examples/rpa_challenge.yaml` | Full 10-round RPA Challenge run until `Congratulations!` |
+| `examples/reframework/main.yaml` | REFramework-style structure for the RPA Challenge |
+
+**Quick start for the new examples:**
+
+```bash
+dotnet run --project src/AutoFlow.Cli -- run examples/file_roundtrip.yaml
+dotnet run --project src/AutoFlow.Cli -- run examples/http_json_report.yaml
+dotnet run --project src/AutoFlow.Cli -- run examples/excel_summary.yaml
+dotnet run --project src/AutoFlow.Cli -- run examples/imports_report.yaml
+dotnet run --project src/AutoFlow.Cli -- run examples/parallel_fetch_report.yaml
+```
+
+### JSON/HTML report generation from the CLI
+
+```bash
+# JSON report
+dotnet run --project src/AutoFlow.Cli -- run examples/report_cli_demo.yaml --output reports/report_cli_demo.json
+
+# HTML report
+dotnet run --project src/AutoFlow.Cli -- run examples/report_cli_demo.yaml --output reports/report_cli_demo.html
+```
+
+### Real-world Example
 
 ### Parallel API Fetch with Retry
 

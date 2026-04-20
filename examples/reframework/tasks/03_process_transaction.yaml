@@ -1,12 +1,16 @@
 schema_version: 1
 name: process_transaction
 
-import:
-  - config/settings.yaml
-  - lib/forms.yaml
-
 tasks:
   process_transaction:
+    inputs:
+      employee:
+        type: object
+        required: true
+      employee_index:
+        type: int
+        required: false
+        default: 0
     steps:
       - step:
           id: log_start
@@ -18,120 +22,70 @@ tasks:
           id: log_header
           uses: log.info
           with:
-            message: "[PROCESS_TRANSACTION] Processing employee: ${employee_first_name} ${employee_last_name}"
-
-      - step:
-          id: click_start_button
-          uses: browser.click
-          with:
-            browserId: "${browser_id}"
-            selector: "button.ng-binding"
-            timeoutMs: "${form_timeout_ms}"
-
-      - step:
-          id: log_clicked_start
-          uses: log.info
-          with:
-            message: "[PROCESS_TRANSACTION] Clicked Start button"
-
-      - step:
-          id: wait_form
-          uses: browser.wait
-          with:
-            browserId: "${browser_id}"
-            selector: "input[ng-model='answer']"
-            state: visible
-            timeoutMs: "${form_timeout_ms}"
-
-      - step:
-          id: log_form_ready
-          uses: log.info
-          with:
-            message: "[PROCESS_TRANSACTION] Form loaded, filling fields..."
+            message: "[PROCESS_TRANSACTION] Processing employee ${employee_index}: ${employee.First Name} ${employee.Last Name}"
 
       - step:
           id: fill_first_name
           uses: browser.fill
           with:
             browserId: "${browser_id}"
-            selector: "input[ng-model='answer'][placeholder='First Name']"
-            value: "${employee_first_name}"
+            selector: "xpath=//label[normalize-space()='First Name']/following-sibling::input[1]"
+            value: "${employee.First Name}"
 
       - step:
           id: fill_last_name
           uses: browser.fill
           with:
             browserId: "${browser_id}"
-            selector: "input[ng-model='answer'][placeholder='Last Name']"
-            value: "${employee_last_name}"
+            selector: "xpath=//label[normalize-space()='Last Name']/following-sibling::input[1]"
+            value: "${employee.Last Name}"
 
       - step:
           id: fill_company
           uses: browser.fill
           with:
             browserId: "${browser_id}"
-            selector: "input[ng-model='answer'][placeholder='Company Name']"
-            value: "${employee_company}"
+            selector: "xpath=//label[normalize-space()='Company Name']/following-sibling::input[1]"
+            value: "${employee.Company Name}"
 
       - step:
           id: fill_role
           uses: browser.fill
           with:
             browserId: "${browser_id}"
-            selector: "input[ng-model='answer'][placeholder='Role in Company']"
-            value: "${employee_role}"
+            selector: "xpath=//label[normalize-space()='Role in Company']/following-sibling::input[1]"
+            value: "${employee.Role in Company}"
 
       - step:
           id: fill_address
           uses: browser.fill
           with:
             browserId: "${browser_id}"
-            selector: "input[ng-model='answer'][placeholder='Address']"
-            value: "${employee_address}"
+            selector: "xpath=//label[normalize-space()='Address']/following-sibling::input[1]"
+            value: "${employee.Address}"
 
       - step:
           id: fill_email
           uses: browser.fill
           with:
             browserId: "${browser_id}"
-            selector: "input[ng-model='answer'][placeholder='Email']"
-            value: "${employee_email}"
+            selector: "xpath=//label[normalize-space()='Email']/following-sibling::input[1]"
+            value: "${employee.Email}"
 
       - step:
           id: fill_phone
           uses: browser.fill
           with:
             browserId: "${browser_id}"
-            selector: "input[ng-model='answer'][placeholder='Phone Number']"
-            value: "${employee_phone}"
-
-      - step:
-          id: log_fields_filled
-          uses: log.info
-          with:
-            message: "[PROCESS_TRANSACTION] All fields filled"
+            selector: "xpath=//label[normalize-space()='Phone Number']/following-sibling::input[1]"
+            value: "${employee.Phone Number}"
 
       - step:
           id: submit_form
           uses: browser.click
           with:
             browserId: "${browser_id}"
-            selector: "input[type='submit']"
-            timeoutMs: "${form_timeout_ms}"
-
-      - step:
-          id: log_submitted
-          uses: log.info
-          with:
-            message: "[PROCESS_TRANSACTION] Form submitted"
-
-      - step:
-          id: wait_result
-          uses: browser.wait
-          with:
-            browserId: "${browser_id}"
-            selector: "div.message, input[ng-model='answer']"
-            state: visible
+            selector: "xpath=//input[@type='submit' and @value='Submit']"
             timeoutMs: "${form_timeout_ms}"
 
       - step:

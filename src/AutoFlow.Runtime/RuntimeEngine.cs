@@ -356,6 +356,7 @@ public sealed class RuntimeEngine : IRuntimeEngine
                 stepResult.ErrorMessage = keywordResult.ErrorMessage;
                 stepResult.Logs.AddRange(keywordResult.Logs.Select(l => _secretResolver.GetMasker().Mask(l)));
 
+                stepResult.FinishedAtUtc = DateTimeOffset.UtcNow;
                 await _hookRunner.OnStepEndAsync(stepContext, stepResult).ConfigureAwait(false);
 
                 if (keywordResult.IsSuccess)
@@ -409,6 +410,7 @@ public sealed class RuntimeEngine : IRuntimeEngine
             {
                 stepResult.Status = ExecutionStatus.Failed;
                 stepResult.ErrorMessage = $"Таймаут {step.Timeout} превышен.";
+                stepResult.FinishedAtUtc = DateTimeOffset.UtcNow;
                 await _hookRunner.OnStepEndAsync(stepContext, stepResult).ConfigureAwait(false);
                 HandleStepFailure(step, stepResult, runResult);
                 break;
@@ -429,6 +431,7 @@ public sealed class RuntimeEngine : IRuntimeEngine
                 }
                 else if (attempt >= maxAttempts)
                 {
+                    stepResult.FinishedAtUtc = DateTimeOffset.UtcNow;
                     await _hookRunner.OnStepEndAsync(stepContext, stepResult).ConfigureAwait(false);
                     HandleStepFailure(step, stepResult, runResult);
                 }
@@ -672,6 +675,11 @@ public sealed class RuntimeEngine : IRuntimeEngine
         }
 
         await ExecuteTaskWithHandlers(calledTask, document, childContext, runResult, workflowContext, cancellationToken).ConfigureAwait(false);
+
+        foreach (var (varName, varValue) in childContext.Variables)
+        {
+            context.SetVariable(varName, varValue);
+        }
 
         if (!string.IsNullOrWhiteSpace(call.SaveAs))
         {

@@ -1,8 +1,10 @@
 using System;
+using System.IO;
 using System.Net;
 using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Collections.Generic;
 using AutoFlow.Abstractions;
 using AutoFlow.Library.Http;
 using AutoFlow.Runtime.Resilience;
@@ -39,6 +41,85 @@ public sealed class HttpRequestKeywordTests
             KeywordName = "http.request",
             Logger = _loggerMock.Object
         };
+    }
+
+    [Fact]
+    public async Task JsonParseKeyword_ParseArray_ReturnsEnumerableObjects()
+    {
+        var keyword = new JsonParseKeyword();
+        var args = new JsonParseArgs
+        {
+            Json = """[{"firstName":"John"},{"firstName":"Jane"}]"""
+        };
+
+        var result = await keyword.ExecuteAsync(CreateContext(), args);
+
+        Assert.True(result.IsSuccess);
+
+        var value = result.Outputs!.GetType().GetProperty("value")!.GetValue(result.Outputs);
+        var items = Assert.IsAssignableFrom<IEnumerable<object?>>(value);
+        var list = items.ToList();
+
+        Assert.Equal(2, list.Count);
+        var first = Assert.IsAssignableFrom<IDictionary<string, object?>>(list[0]);
+        Assert.Equal("John", first["firstName"]);
+    }
+
+    [Fact]
+    public async Task JsonParseKeyword_ParseObjectPath_ReturnsDictionary()
+    {
+        var keyword = new JsonParseKeyword();
+        var args = new JsonParseArgs
+        {
+            Json = """{"employee":{"firstName":"John","age":30}}""",
+            Path = "employee"
+        };
+
+        var result = await keyword.ExecuteAsync(CreateContext(), args);
+
+        Assert.True(result.IsSuccess);
+
+        var value = result.Outputs!.GetType().GetProperty("value")!.GetValue(result.Outputs);
+        var employee = Assert.IsAssignableFrom<IDictionary<string, object?>>(value);
+
+        Assert.Equal("John", employee["firstName"]);
+        Assert.Equal(30, Convert.ToInt32(employee["age"]));
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_SaveToFile_WritesResponseBytes()
+    {
+        var tempRoot = Path.Combine(Path.GetTempPath(), $"autoflow_http_{Guid.NewGuid():N}");
+        Directory.CreateDirectory(tempRoot);
+        var previousDirectory = Directory.GetCurrentDirectory();
+
+        try
+        {
+            Directory.SetCurrentDirectory(tempRoot);
+            SetupHttpResponse(HttpStatusCode.OK, "file-content");
+
+            var keyword = new HttpRequestKeyword(_httpClient, _circuitBreaker);
+            var args = new HttpRequestArgs
+            {
+                Url = "https://api.example.com/file",
+                Method = "GET",
+                SaveToFile = "downloads/result.txt"
+            };
+
+            var result = await keyword.ExecuteAsync(CreateContext(), args);
+
+            Assert.True(result.IsSuccess);
+            Assert.True(File.Exists(Path.Combine(tempRoot, "downloads", "result.txt")));
+            Assert.Equal("file-content", await File.ReadAllTextAsync(Path.Combine(tempRoot, "downloads", "result.txt")));
+        }
+        finally
+        {
+            Directory.SetCurrentDirectory(previousDirectory);
+            if (Directory.Exists(tempRoot))
+            {
+                Directory.Delete(tempRoot, recursive: true);
+            }
+        }
     }
 
     [Fact]

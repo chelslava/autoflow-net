@@ -28,6 +28,9 @@ public sealed class KeywordExecutor
         {
             PropertyNameCaseInsensitive = true
         };
+        _jsonOptions.Converters.Add(new System.Text.Json.Serialization.JsonStringEnumConverter());
+        // Allow numbers to be deserialized as strings (YAML parser may convert "1" to int)
+        _jsonOptions.Converters.Add(new FlexibleStringConverter());
     }
 
     public async Task<KeywordResult> ExecuteAsync(
@@ -156,5 +159,36 @@ public sealed class KeywordExecutor
         {
             return "[Masking timed out - data may contain sensitive values]";
         }
+    }
+}
+
+/// <summary>
+/// Allows JSON numbers, booleans to be deserialized as strings.
+/// This handles YAML parser converting "1" to int when target property is string.
+/// </summary>
+internal sealed class FlexibleStringConverter : System.Text.Json.Serialization.JsonConverter<string>
+{
+    public override string? Read(
+        ref System.Text.Json.Utf8JsonReader reader,
+        Type typeToConvert,
+        JsonSerializerOptions options)
+    {
+        return reader.TokenType switch
+        {
+            System.Text.Json.JsonTokenType.String => reader.GetString(),
+            System.Text.Json.JsonTokenType.Number => reader.GetDouble().ToString(),
+            System.Text.Json.JsonTokenType.True => "true",
+            System.Text.Json.JsonTokenType.False => "false",
+            System.Text.Json.JsonTokenType.Null => null,
+            _ => throw new System.Text.Json.JsonException($"Cannot convert {reader.TokenType} to string")
+        };
+    }
+
+    public override void Write(
+        System.Text.Json.Utf8JsonWriter writer,
+        string value,
+        JsonSerializerOptions options)
+    {
+        writer.WriteStringValue(value);
     }
 }

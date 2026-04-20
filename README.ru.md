@@ -118,6 +118,45 @@ dotnet run --project src/AutoFlow.Cli -- run examples/browser_login.yaml
 
 ## 📖 Примеры
 
+### Готовые workflow из каталога `examples/`
+
+| Файл | Что показывает |
+|------|----------------|
+| `examples/flow.yaml` | Самый простой запуск с `log.info` |
+| `examples/file_roundtrip.yaml` | Локальная работа с файлами: `files.write`, `files.exists`, `files.read`, `datetime.now`, `if` |
+| `examples/http_json_report.yaml` | HTTP-запрос + разбор JSON + генерация локального отчёта |
+| `examples/excel_summary.yaml` | Скачивание Excel и чтение строк через `excel.read` |
+| `examples/imports_report.yaml` | Отдельный import-oriented пример с подключением общих задач и переменных |
+| `examples/parallel_fetch_report.yaml` | Отдельный focused-пример `parallel` + сборка отчёта |
+| `examples/report_cli_demo.yaml` | Пример для генерации JSON/HTML отчётов через CLI |
+| `examples/advanced_flow.yaml` | `if`, `foreach`, `call`, чтение файлов |
+| `examples/advanced_features.yaml` | `parallel`, `retry`, `on_error`, `finally` |
+| `examples/imports/main.yaml` | Импорты workflow и переиспользуемые задачи |
+| `examples/browser_login.yaml` | Браузерный login-flow |
+| `examples/browser_ecommerce.yaml` | Браузерный e-commerce сценарий |
+| `examples/rpa_challenge.yaml` | Полный RPA Challenge на 10 раундов до `Congratulations!` |
+| `examples/reframework/main.yaml` | REFramework-структура для RPA Challenge |
+
+**Быстрый запуск новых примеров:**
+
+```bash
+dotnet run --project src/AutoFlow.Cli -- run examples/file_roundtrip.yaml
+dotnet run --project src/AutoFlow.Cli -- run examples/http_json_report.yaml
+dotnet run --project src/AutoFlow.Cli -- run examples/excel_summary.yaml
+dotnet run --project src/AutoFlow.Cli -- run examples/imports_report.yaml
+dotnet run --project src/AutoFlow.Cli -- run examples/parallel_fetch_report.yaml
+```
+
+### Пример генерации JSON/HTML отчётов через CLI
+
+```bash
+# JSON-отчёт
+dotnet run --project src/AutoFlow.Cli -- run examples/report_cli_demo.yaml --output reports/report_cli_demo.json
+
+# HTML-отчёт
+dotnet run --project src/AutoFlow.Cli -- run examples/report_cli_demo.yaml --output reports/report_cli_demo.html
+```
+
 ### Параллельные API запросы с повторами
 
 ```yaml

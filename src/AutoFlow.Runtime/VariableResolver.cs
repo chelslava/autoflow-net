@@ -3,6 +3,7 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
+using System.Reflection;
 using System.Text.RegularExpressions;
 using AutoFlow.Abstractions;
 
@@ -90,6 +91,54 @@ public static class VariableResolver
             }
         }
 
+        var dotIndex = expression.IndexOf('.');
+        if (dotIndex > 0)
+        {
+            var varName = expression[..dotIndex];
+            var propertyPath = expression[(dotIndex + 1)..];
+            var obj = context.GetVariable(varName);
+            return GetNestedProperty(obj, propertyPath);
+        }
+
         return context.GetVariable(expression);
+    }
+
+    private static object? GetNestedProperty(object? obj, string propertyPath)
+    {
+        if (obj is null)
+            return null;
+
+        var parts = propertyPath.Split('.');
+        var current = obj;
+
+        foreach (var part in parts)
+        {
+            if (current is null)
+                return null;
+
+            if (current is IDictionary<string, object?> dict)
+            {
+                if (!dict.TryGetValue(part, out var dictValue))
+                    return null;
+                current = dictValue;
+            }
+            else if (current is IDictionary genericDict)
+            {
+                current = genericDict[part];
+            }
+            else
+            {
+                var prop = current.GetType().GetProperty(
+                    part,
+                    BindingFlags.Public | BindingFlags.Instance | BindingFlags.IgnoreCase);
+
+                if (prop is null)
+                    return null;
+
+                current = prop.GetValue(current);
+            }
+        }
+
+        return current;
     }
 }

@@ -1,0 +1,78 @@
+schema_version: 1
+name: excel_summary_demo
+
+variables:
+  excel_url: "https://rpachallenge.com/assets/downloadFiles/challenge.xlsx"
+  excel_path: "temp/excel_summary/input.xlsx"
+  report_path: "output/excel_summary/report.txt"
+
+tasks:
+  main:
+    finally:
+      - step:
+          id: cleanup_excel
+          uses: files.delete
+          with:
+            path: "${excel_path}"
+          continue_on_error: true
+
+    steps:
+      - step:
+          id: ensure_temp_dir
+          uses: files.write
+          with:
+            path: "temp/excel_summary/.gitkeep"
+            content: ""
+
+      - step:
+          id: download_excel
+          uses: http.request
+          with:
+            url: "${excel_url}"
+            method: GET
+            saveToFile: "${excel_path}"
+          save_as:
+            statusCode: download_status
+
+      - step:
+          id: read_excel
+          uses: excel.read
+          with:
+            path: "${excel_path}"
+          save_as:
+            rows: employees
+            count: employee_count
+
+      - step:
+          id: log_count
+          uses: log.info
+          with:
+            message: "Loaded ${employee_count} rows from Excel"
+
+      - for_each:
+          id: log_rows
+          items: "${employees}"
+          as: employee
+          steps:
+            - step:
+                id: log_employee
+                uses: log.info
+                with:
+                  message: "Employee ${employee_index}: ${employee.First Name} ${employee.Last Name} / ${employee.Company Name}"
+
+      - step:
+          id: write_report
+          uses: files.write
+          with:
+            path: "${report_path}"
+            content: |
+              Excel summary example
+              Download status: ${download_status}
+              Employee count: ${employee_count}
+              Source file: ${excel_path}
+
+      - step:
+          id: log_complete
+          uses: log.info
+          with:
+            message: "Excel summary report created: ${report_path}"

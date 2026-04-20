@@ -20,7 +20,7 @@ public static class PathValidator
 
             if (ContainsSuspiciousPatterns(decodedPath))
             {
-                return (false, null, "Path contains suspicious traversal patterns.");
+                return (false, null, "Path contains suspicious traversal patterns and may resolve outside the allowed directory.");
             }
 
             var allowedBase = basePath switch

@@ -1,9 +1,6 @@
 schema_version: 1
 name: error_handler
 
-import:
-  - config/settings.yaml
-
 tasks:
   handle_error:
     steps:

@@ -1,7 +1,7 @@
 schema_version: 1
 name: rpa_challenge_reframework
 
-import:
+imports:
   - config/settings.yaml
   - tasks/01_init.yaml
   - tasks/02_get_transaction.yaml
@@ -9,10 +9,14 @@ import:
   - tasks/04_end_process.yaml
   - tasks/05_error_handler.yaml
 
+variables:
+  employees_data: []
+
 tasks:
   main:
     on_error:
-      - call: handle_error
+      - call:
+          task: handle_error
 
     finally:
       - step:
@@ -26,11 +30,53 @@ tasks:
           id: ensure_cleanup
           uses: files.delete
           with:
-            path: "${temp_dir}"
+            path: "${temp_dir}/input.xlsx"
           continue_on_error: true
 
     steps:
-      - call: init
-      - call: get_transaction
-      - call: process_transaction
-      - call: end_process
+      - call:
+          task: init
+
+      - call:
+          task: get_transaction
+
+      - step:
+          id: click_start
+          uses: browser.click
+          with:
+            browserId: "${browser_id}"
+            selector: "xpath=//button[contains(@class, 'btn-large') and normalize-space()='Start']"
+            timeoutMs: 10000
+
+      - step:
+          id: wait_first_form
+          uses: browser.wait
+          with:
+            browserId: "${browser_id}"
+            selector: "xpath=//label[normalize-space()='First Name']/following-sibling::input[1]"
+            state: visible
+            timeoutMs: 10000
+
+      - for_each:
+          id: process_employees
+          items: "${employees_data}"
+          as: employee
+          steps:
+            - call:
+                id: process_employee
+                task: process_transaction
+                with:
+                  employee: "${employee}"
+                  employee_index: "${employee_index}"
+
+      - step:
+          id: assert_congratulations
+          uses: browser.assert_text
+          with:
+            browserId: "${browser_id}"
+            selector: "body"
+            expected: "Congratulations!"
+            contains: true
+
+      - call:
+          task: end_process

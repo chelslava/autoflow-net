@@ -32,7 +32,7 @@ public sealed class FileWriteKeyword : IKeywordHandler<FileWriteArgs>
             return Task.FromResult(KeywordResult.Failure(errorMessage ?? "Invalid path"));
         }
 
-        var content = args.Content;
+        var content = args.Content ?? string.Empty;
         var directory = Path.GetDirectoryName(fullPath);
         
         if (!string.IsNullOrEmpty(directory) && !Directory.Exists(directory))

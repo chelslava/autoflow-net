@@ -18,6 +18,7 @@ public sealed class HttpRequestArgs
 {
     public string Url { get; set; } = string.Empty;
     public string Method { get; set; } = "GET";
+    public string? SaveToFile { get; set; }
     public Dictionary<string, string>? Headers { get; set; }
     public object? Body { get; set; }
     public int? TimeoutMs { get; set; }
@@ -133,6 +134,7 @@ public sealed class HttpRequestKeyword : IKeywordHandler<HttpRequestArgs>
 
         var maxResponseSize = args.MaxResponseSizeBytes ?? DefaultMaxResponseSize;
         string responseBody;
+        byte[]? responseBytes = null;
         
         var contentLength = response.Content.Headers.ContentLength;
         if (contentLength.HasValue && contentLength.Value > maxResponseSize)
@@ -143,8 +145,31 @@ public sealed class HttpRequestKeyword : IKeywordHandler<HttpRequestArgs>
         {
             using var stream = await response.Content.ReadAsStreamAsync(effectiveToken).ConfigureAwait(false);
             using var limitedStream = new LimitedStream(stream, maxResponseSize);
-            using var reader = new StreamReader(limitedStream, Encoding.UTF8);
-            responseBody = await reader.ReadToEndAsync(effectiveToken).ConfigureAwait(false);
+            using var buffer = new MemoryStream();
+            await limitedStream.CopyToAsync(buffer, effectiveToken).ConfigureAwait(false);
+            responseBytes = buffer.ToArray();
+            responseBody = Encoding.UTF8.GetString(responseBytes);
+        }
+
+        string? savedToFile = null;
+        if (response.IsSuccessStatusCode && !string.IsNullOrWhiteSpace(args.SaveToFile) && responseBytes is not null)
+        {
+            var (isValidPath, fullPath, pathError) = ValidateOutputPath(args.SaveToFile);
+            if (!isValidPath || fullPath is null)
+            {
+                context.Logger.LogWarning("SaveToFile validation failed: {Error}", pathError);
+                return KeywordResult.Failure(pathError ?? "Invalid saveToFile path.");
+            }
+
+            var directory = Path.GetDirectoryName(fullPath);
+            if (!string.IsNullOrWhiteSpace(directory))
+            {
+                Directory.CreateDirectory(directory);
+            }
+
+            await File.WriteAllBytesAsync(fullPath, responseBytes, effectiveToken).ConfigureAwait(false);
+            savedToFile = args.SaveToFile;
+            responseBody = $"[saved to {args.SaveToFile}]";
         }
 
         if (args.EnableCircuitBreaker)
@@ -165,6 +190,7 @@ public sealed class HttpRequestKeyword : IKeywordHandler<HttpRequestArgs>
             statusText = response.StatusCode.ToString(),
             headers = response.Headers,
             body = responseBody,
+            savedToFile,
             isSuccess = response.IsSuccessStatusCode
         };
 
@@ -184,6 +210,11 @@ public sealed class HttpRequestKeyword : IKeywordHandler<HttpRequestArgs>
                 ? responseBody[..args.MaxLogBodyLength] + "...[truncated]"
                 : responseBody;
             logs.Add($"Body: {bodyToLog}");
+        }
+
+        if (!string.IsNullOrWhiteSpace(savedToFile))
+        {
+            logs.Add($"Saved to: {savedToFile}");
         }
 
         return response.IsSuccessStatusCode
@@ -229,6 +260,39 @@ public sealed class HttpRequestKeyword : IKeywordHandler<HttpRequestArgs>
         }
 
         return (true, null);
+    }
+
+    private static (bool IsValid, string? FullPath, string? ErrorMessage) ValidateOutputPath(string path)
+    {
+        if (string.IsNullOrWhiteSpace(path))
+        {
+            return (false, null, "saveToFile path cannot be empty.");
+        }
+
+        if (Path.IsPathRooted(path))
+        {
+            return (false, null, "Absolute saveToFile paths are not allowed.");
+        }
+
+        if (path.Contains("..", StringComparison.Ordinal) || path.Contains("~", StringComparison.Ordinal))
+        {
+            return (false, null, "saveToFile path cannot contain traversal segments.");
+        }
+
+        var workingDirectory = Path.GetFullPath(Directory.GetCurrentDirectory());
+        var fullPath = Path.GetFullPath(Path.Combine(workingDirectory, path));
+
+        var normalizedRoot = workingDirectory.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+        var normalizedFullPath = fullPath.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+
+        var isWithinRoot =
+            normalizedFullPath.Equals(normalizedRoot, StringComparison.OrdinalIgnoreCase) ||
+            normalizedFullPath.StartsWith(normalizedRoot + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase) ||
+            normalizedFullPath.StartsWith(normalizedRoot + Path.AltDirectorySeparatorChar, StringComparison.OrdinalIgnoreCase);
+
+        return isWithinRoot
+            ? (true, fullPath, null)
+            : (false, null, "saveToFile path must stay inside the current working directory.");
     }
 
     private static bool IsPrivateNetwork(string host)

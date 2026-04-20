@@ -1,11 +1,6 @@
 schema_version: 1
 name: init
 
-import:
-  - config/settings.yaml
-  - lib/files.yaml
-  - lib/browser.yaml
-
 tasks:
   init:
     steps:

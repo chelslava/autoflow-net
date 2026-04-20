@@ -65,12 +65,12 @@ tasks:
                 save_as:
                   body: comments_data
 
-      # Exponential backoff retry
+      # Retry-конфигурация для HTTP шага (сработает только если endpoint начнёт ошибаться)
       - step:
           id: unstable_api_call
           uses: http.request
           with:
-            url: "${api_base}/unstable-endpoint"
+            url: "${api_base}/posts/1"
             method: GET
           retry:
             attempts: 5
@@ -82,12 +82,12 @@ tasks:
               - TimeoutException
               - HttpRequestException
 
-      # Conditional retry с skip_on
+      # Conditional retry с skip_on (конфигурация готова, но на успешном endpoint не активируется)
       - step:
           id: another_retry
           uses: http.request
           with:
-            url: "${api_base}/another-endpoint"
+            url: "${api_base}/todos/1"
             method: GET
           retry:
             attempts: 3

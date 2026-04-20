@@ -12,9 +12,10 @@ schema_version: 1
 name: rpa_challenge
 
 variables:
-  challenge_url: "http://rpachallenge.com/"
-  excel_url: "http://rpachallenge.com/assets/inputFiles/input.xlsx"
+  challenge_url: "https://rpachallenge.com/"
+  excel_url: "https://rpachallenge.com/assets/downloadFiles/challenge.xlsx"
   excel_path: "temp/employees.xlsx"
+  result_screenshot_path: "reports/rpa_challenge_result.png"
 
 tasks:
   main:
@@ -47,6 +48,13 @@ tasks:
             path: "temp/.gitkeep"
             content: ""
 
+      - step:
+          id: create_reports_dir
+          uses: files.write
+          with:
+            path: "reports/.gitkeep"
+            content: ""
+
       # Step 2: Download Excel file with employee data
       - step:
           id: download_excel
@@ -58,13 +66,28 @@ tasks:
           save_as:
             statusCode: download_status
 
+      - step:
+          id: read_employees
+          uses: excel.read
+          with:
+            path: "${excel_path}"
+          save_as:
+            rows: employees_data
+            count: employees_count
+
+      - step:
+          id: log_loaded_rows
+          uses: log.info
+          with:
+            message: "Loaded ${employees_count} employees from ${excel_path}"
+
       # Step 3: Open browser and navigate to challenge
       - step:
           id: open_browser
           uses: browser.open
           with:
             browser: chromium
-            headless: false
+            headless: true
             width: 1280
             height: 800
           save_as:
@@ -83,8 +106,8 @@ tasks:
           uses: browser.click
           with:
             browserId: "${browser_id}"
-            selector: "button.ng-binding"
-            timeoutMs: 5000
+            selector: "xpath=//button[contains(@class, 'btn-large') and normalize-space()='Start']"
+            timeoutMs: 10000
 
       # Step 5: Wait for form to appear
       - step:
@@ -92,90 +115,92 @@ tasks:
           uses: browser.wait
           with:
             browserId: "${browser_id}"
-            selector: "input[ng-model='answer']"
+            selector: "xpath=//label[normalize-space()='First Name']/following-sibling::input[1]"
             state: visible
-            timeoutMs: 5000
+            timeoutMs: 10000
 
-      # Step 6: Fill form for employee 1 (First Name)
+      - for_each:
+          id: process_employees
+          items: "${employees_data}"
+          as: employee
+          steps:
+            - step:
+                id: log_employee
+                uses: log.info
+                with:
+                  message: "Processing row ${employee_index}: ${employee.First Name} ${employee.Last Name}"
+
+            - step:
+                id: fill_first_name
+                uses: browser.fill
+                with:
+                  browserId: "${browser_id}"
+                  selector: "xpath=//label[normalize-space()='First Name']/following-sibling::input[1]"
+                  value: "${employee.First Name}"
+
+            - step:
+                id: fill_last_name
+                uses: browser.fill
+                with:
+                  browserId: "${browser_id}"
+                  selector: "xpath=//label[normalize-space()='Last Name']/following-sibling::input[1]"
+                  value: "${employee.Last Name}"
+
+            - step:
+                id: fill_company
+                uses: browser.fill
+                with:
+                  browserId: "${browser_id}"
+                  selector: "xpath=//label[normalize-space()='Company Name']/following-sibling::input[1]"
+                  value: "${employee.Company Name}"
+
+            - step:
+                id: fill_role
+                uses: browser.fill
+                with:
+                  browserId: "${browser_id}"
+                  selector: "xpath=//label[normalize-space()='Role in Company']/following-sibling::input[1]"
+                  value: "${employee.Role in Company}"
+
+            - step:
+                id: fill_address
+                uses: browser.fill
+                with:
+                  browserId: "${browser_id}"
+                  selector: "xpath=//label[normalize-space()='Address']/following-sibling::input[1]"
+                  value: "${employee.Address}"
+
+            - step:
+                id: fill_email
+                uses: browser.fill
+                with:
+                  browserId: "${browser_id}"
+                  selector: "xpath=//label[normalize-space()='Email']/following-sibling::input[1]"
+                  value: "${employee.Email}"
+
+            - step:
+                id: fill_phone
+                uses: browser.fill
+                with:
+                  browserId: "${browser_id}"
+                  selector: "xpath=//label[normalize-space()='Phone Number']/following-sibling::input[1]"
+                  value: "${employee.Phone Number}"
+
+            - step:
+                id: submit_form
+                uses: browser.click
+                with:
+                  browserId: "${browser_id}"
+                  selector: "input[type='submit']"
+
       - step:
-          id: fill_first_name_1
-          uses: browser.fill
+          id: assert_congratulations
+          uses: browser.assert_text
           with:
             browserId: "${browser_id}"
-            selector: "input[ng-model='answer'][placeholder='First Name']"
-            value: "John"
-
-      # Step 7: Fill form for employee 1 (Last Name)
-      - step:
-          id: fill_last_name_1
-          uses: browser.fill
-          with:
-            browserId: "${browser_id}"
-            selector: "input[ng-model='answer'][placeholder='Last Name']"
-            value: "Doe"
-
-      # Step 8: Fill form for employee 1 (Company Name)
-      - step:
-          id: fill_company_1
-          uses: browser.fill
-          with:
-            browserId: "${browser_id}"
-            selector: "input[ng-model='answer'][placeholder='Company Name']"
-            value: "ACME Corp"
-
-      # Step 9: Fill form for employee 1 (Role)
-      - step:
-          id: fill_role_1
-          uses: browser.fill
-          with:
-            browserId: "${browser_id}"
-            selector: "input[ng-model='answer'][placeholder='Role in Company']"
-            value: "Developer"
-
-      # Step 10: Fill form for employee 1 (Address)
-      - step:
-          id: fill_address_1
-          uses: browser.fill
-          with:
-            browserId: "${browser_id}"
-            selector: "input[ng-model='answer'][placeholder='Address']"
-            value: "123 Main Street"
-
-      # Step 11: Fill form for employee 1 (Email)
-      - step:
-          id: fill_email_1
-          uses: browser.fill
-          with:
-            browserId: "${browser_id}"
-            selector: "input[ng-model='answer'][placeholder='Email']"
-            value: "john.doe@example.com"
-
-      # Step 12: Fill form for employee 1 (Phone)
-      - step:
-          id: fill_phone_1
-          uses: browser.fill
-          with:
-            browserId: "${browser_id}"
-            selector: "input[ng-model='answer'][placeholder='Phone Number']"
-            value: "555-123-4567"
-
-      # Step 13: Submit form
-      - step:
-          id: submit_form_1
-          uses: browser.click
-          with:
-            browserId: "${browser_id}"
-            selector: "input[type='submit']"
-
-      # Step 14: Wait for next form or results
-      - step:
-          id: wait_transition
-          uses: browser.wait
-          with:
-            browserId: "${browser_id}"
-            selector: "div.message, input[ng-model='answer']"
-            state: visible
-            timeoutMs: 3000
+            selector: "body"
+            expected: "Congratulations!"
+            contains: true
 
       # Step 15: Take screenshot of results
       - step:
@@ -183,7 +208,7 @@ tasks:
           uses: browser.screenshot
           with:
             browserId: "${browser_id}"
-            path: "reports/rpa_challenge_result.png"
+            path: "${result_screenshot_path}"
             fullPage: true
 
       # Step 16: Log success
@@ -191,4 +216,4 @@ tasks:
           id: log_success
           uses: log.info
           with:
-            message: "RPA Challenge completed successfully!"
+            message: "RPA Challenge completed successfully! Screenshot saved to ${result_screenshot_path}"

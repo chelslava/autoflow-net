@@ -1,0 +1,81 @@
+schema_version: 1
+name: parallel_fetch_report_demo
+
+variables:
+  api_base: "https://jsonplaceholder.typicode.com"
+  report_path: "output/parallel_fetch_report/summary.txt"
+  post_path: "output/parallel_fetch_report/post.json"
+  todo_path: "output/parallel_fetch_report/todo.json"
+  user_path: "output/parallel_fetch_report/user.json"
+
+tasks:
+  main:
+    steps:
+      - parallel:
+          id: fetch_parallel
+          max_concurrency: 3
+          steps:
+            - step:
+                id: fetch_post
+                uses: http.request
+                with:
+                  url: "${api_base}/posts/1"
+                  method: GET
+                  saveToFile: "${post_path}"
+
+            - step:
+                id: fetch_todo
+                uses: http.request
+                with:
+                  url: "${api_base}/todos/1"
+                  method: GET
+                  saveToFile: "${todo_path}"
+
+            - step:
+                id: fetch_user
+                uses: http.request
+                with:
+                  url: "${api_base}/users/1"
+                  method: GET
+                  saveToFile: "${user_path}"
+
+      - step:
+          id: check_post_file
+          uses: files.exists
+          with:
+            path: "${post_path}"
+          save_as:
+            exists: post_exists
+
+      - step:
+          id: check_todo_file
+          uses: files.exists
+          with:
+            path: "${todo_path}"
+          save_as:
+            exists: todo_exists
+
+      - step:
+          id: check_user_file
+          uses: files.exists
+          with:
+            path: "${user_path}"
+          save_as:
+            exists: user_exists
+
+      - step:
+          id: write_report
+          uses: files.write
+          with:
+            path: "${report_path}"
+            content: |
+              Parallel fetch example
+              Post saved: ${post_exists} -> ${post_path}
+              Todo saved: ${todo_exists} -> ${todo_path}
+              User saved: ${user_exists} -> ${user_path}
+
+      - step:
+          id: log_complete
+          uses: log.info
+          with:
+            message: "Parallel report created: ${report_path}"

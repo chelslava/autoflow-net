@@ -2,14 +2,17 @@ schema_version: 1
 name: config
 
 variables:
-  challenge_url: "http://rpachallenge.com/"
-  excel_url: "http://rpachallenge.com/assets/inputFiles/input.xlsx"
+  challenge_url: "https://rpachallenge.com/"
+  excel_url: "https://rpachallenge.com/assets/downloadFiles/challenge.xlsx"
   temp_dir: "temp/rpa_challenge"
   reports_dir: "reports"
+  output_dir: "output"
   max_retries: 3
   browser_type: "chromium"
   headless: false
   browser_width: 1280
   browser_height: 800
   timeout_ms: 30000
-  form_timeout_ms: 5000
+  form_timeout_ms: 10000
+
+tasks: {}
