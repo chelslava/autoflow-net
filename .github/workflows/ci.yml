@@ -15,15 +15,15 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Setup .NET
-        uses: actions/setup-dotnet@v4
+        uses: actions/setup-dotnet@v5
         with:
           dotnet-version: ${{ env.DOTNET_VERSION }}
 
       - name: Cache NuGet packages
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: ~/.nuget/packages
           key: ${{ runner.os }}-nuget-${{ hashFiles('**/Directory.Packages.props', '**/*.csproj') }}
@@ -53,7 +53,7 @@ jobs:
           done
 
       - name: Upload coverage
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: coverage
           path: ./**/TestResults/*/coverage.cobertura.xml
@@ -63,7 +63,7 @@ jobs:
         run: dotnet publish src/AutoFlow.Cli/AutoFlow.Cli.csproj -c Release -o ./publish-linux /p:PublishSingleFile=true /p:SelfContained=true /p:RuntimeIdentifier=linux-x64
 
       - name: Upload artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: autoflow-linux-x64
           path: ./publish-linux/
@@ -74,15 +74,15 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Setup .NET
-        uses: actions/setup-dotnet@v4
+        uses: actions/setup-dotnet@v5
         with:
           dotnet-version: ${{ env.DOTNET_VERSION }}
 
       - name: Cache NuGet packages
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: ~/.nuget/packages
           key: ${{ runner.os }}-nuget-${{ hashFiles('**/Directory.Packages.props', '**/*.csproj') }}
@@ -133,15 +133,15 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Setup .NET
-        uses: actions/setup-dotnet@v4
+        uses: actions/setup-dotnet@v5
         with:
           dotnet-version: ${{ env.DOTNET_VERSION }}
 
       - name: Cache NuGet packages
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: ~/.nuget/packages
           key: ${{ runner.os }}-nuget-${{ hashFiles('**/Directory.Packages.props', '**/*.csproj') }}
@@ -160,7 +160,7 @@ jobs:
         run: dotnet test tests/AutoFlow.Scenarios.Tests/AutoFlow.Scenarios.Tests.csproj --no-build --configuration Release --filter "Category=Scenario|Category=ExternalScenario" --collect:"XPlat Code Coverage"
 
       - name: Upload scenario coverage
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: scenario-coverage
           path: ./**/TestResults/*/coverage.cobertura.xml
@@ -172,15 +172,15 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Setup .NET
-        uses: actions/setup-dotnet@v4
+        uses: actions/setup-dotnet@v5
         with:
           dotnet-version: ${{ env.DOTNET_VERSION }}
 
       - name: Cache NuGet packages
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: ~/.nuget/packages
           key: ${{ runner.os }}-nuget-${{ hashFiles('**/Directory.Packages.props', '**/*.csproj') }}
@@ -202,7 +202,7 @@ jobs:
         run: dotnet test tests/AutoFlow.Library.Browser.Tests/AutoFlow.Library.Browser.Tests.csproj --configuration Release --filter "Category=Browser" --collect:"XPlat Code Coverage"
 
       - name: Upload browser coverage
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: browser-coverage
           path: ./**/TestResults/*/coverage.cobertura.xml
