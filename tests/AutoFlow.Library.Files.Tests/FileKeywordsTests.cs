@@ -251,17 +251,17 @@ public sealed class FileKeywordsTests : IDisposable
 
     private static string GetColumnName(int columnIndex)
     {
-        var name = string.Empty;
         var value = columnIndex + 1;
+        var chars = new Stack<char>();
 
         while (value > 0)
         {
             value--;
-            name = (char)('A' + (value % 26)) + name;
+            chars.Push((char)('A' + (value % 26)));
             value /= 26;
         }
 
-        return name;
+        return new string(chars.ToArray());
     }
 
     private static void AddEntry(ZipArchive archive, string entryName, string content)

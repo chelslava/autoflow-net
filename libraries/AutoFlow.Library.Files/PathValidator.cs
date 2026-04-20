@@ -60,24 +60,18 @@ public static class PathValidator
 
     private static string DecodePath(string path)
     {
-        var decoded = path;
-
         try
         {
-            decoded = Uri.UnescapeDataString(path);
+            return Uri.UnescapeDataString(path).Replace('\\', '/');
         }
         catch (ArgumentException)
         {
-            decoded = path;
+            return path.Replace('\\', '/');
         }
         catch (UriFormatException)
         {
-            decoded = path;
+            return path.Replace('\\', '/');
         }
-
-        decoded = decoded.Replace('\\', '/');
-
-        return decoded;
     }
 
     private static bool ContainsSuspiciousPatterns(string path)
