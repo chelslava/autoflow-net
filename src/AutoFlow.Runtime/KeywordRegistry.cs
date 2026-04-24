@@ -30,6 +30,11 @@ public sealed class KeywordRegistry : IKeywordMetadataProvider
         return registration;
     }
 
+    public bool TryGet(string name, out KeywordRegistration registration)
+    {
+        return _registrations.TryGetValue(name, out registration);
+    }
+
     public IReadOnlyCollection<KeywordRegistration> GetAll() =>
         _registrations.Values
             .OrderBy(x => x.Name, StringComparer.OrdinalIgnoreCase)

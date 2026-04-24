@@ -92,4 +92,13 @@ public sealed class ExecutionContext : IExecutionContext
             ? value
             : null;
     }
+
+    public ExecutionContext Clone()
+    {
+        return new ExecutionContext(Services, new Dictionary<string, object?>(_variables))
+        {
+            _stepResults = new Dictionary<string, object?>(_stepResults),
+            _runtimeState = new Dictionary<string, object?>(_runtimeState)
+        };
+    }
 }

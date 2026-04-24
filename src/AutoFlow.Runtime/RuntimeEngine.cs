@@ -561,7 +561,11 @@ public sealed class RuntimeEngine : IRuntimeEngine
                 if (parallel.ErrorMode == ParallelErrorMode.FailFast && Interlocked.Read(ref failedFlag) == 1)
                     return;
 
-                await ExecuteNode(node, document, context, runResult, workflowContext, cancellationToken).ConfigureAwait(false);
+                var taskContext = context.Clone();
+                await ExecuteNode(node, document, taskContext, runResult, workflowContext, cancellationToken).ConfigureAwait(false);
+
+                foreach (var kv in taskContext.Variables)
+                    context.SetVariable(kv.Key, kv.Value);
             }
             catch (Exception ex) when (
                 ex is not (

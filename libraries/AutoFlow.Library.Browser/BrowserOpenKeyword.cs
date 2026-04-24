@@ -41,28 +41,45 @@ public sealed class BrowserOpenKeyword : IKeywordHandler<BrowserOpenArgs>
             "Opening {Browser} browser (headless: {Headless})",
             args.Browser, args.Headless);
 
-        var instance = await _browserManager.CreateBrowserAsync(
-            args.Browser,
-            args.Headless,
-            args.Width,
-            args.Height,
-            args.SlowMo,
-            args.DisableJavaScript,
-            args.IgnoreHTTPSErrors,
-            cancellationToken).ConfigureAwait(false);
-
-        context.Logger.LogInformation(
-            "Browser opened with ID: {BrowserId}",
-            instance.Id);
-
-        return KeywordResult.Success(new
+        try
         {
-            browserId = instance.Id,
-            browser = instance.BrowserType,
-            headless = instance.Headless,
-            width = instance.Width ?? 1280,
-            height = instance.Height ?? 720
-        });
+            var instance = await _browserManager.CreateBrowserAsync(
+                args.Browser,
+                args.Headless,
+                args.Width,
+                args.Height,
+                args.SlowMo,
+                args.DisableJavaScript,
+                args.IgnoreHTTPSErrors,
+                cancellationToken).ConfigureAwait(false);
+
+            context.Logger.LogInformation(
+                "Browser opened with ID: {BrowserId}",
+                instance.Id);
+
+            return KeywordResult.Success(new
+            {
+                browserId = instance.Id,
+                browser = instance.BrowserType,
+                headless = instance.Headless,
+                width = instance.Width ?? 1280,
+                height = instance.Height ?? 720
+            });
+        }
+        catch (PlaywrightException ex)
+        {
+            context.Logger.LogError(ex, "Failed to open browser: {Message}", ex.Message);
+            return KeywordResult.Failure(
+                $"Failed to open {args.Browser} browser: {ex.Message}. " +
+                "Ensure Playwright browsers are installed. Run: pwsh playwright.ps1 install");
+        }
+        catch (Exception ex)
+        {
+            context.Logger.LogError(ex, "Unexpected error opening browser");
+            return KeywordResult.Failure(
+                $"Unexpected error opening browser: {ex.Message}. " +
+                "Check logs for details.");
+        }
     }
 
     public static async Task<IPage?> GetPageAsync(string browserId) =>

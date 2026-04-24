@@ -112,8 +112,7 @@ public sealed class SQLiteExecutionRepository : IExecutionRepository, IDisposabl
                 return;
 #pragma warning restore CA1508
 
-            await using var connection = CreateConnection();
-            await connection.OpenAsync(cancellationToken).ConfigureAwait(false);
+            await using var connection = await CreateConnectionAsync(cancellationToken).ConfigureAwait(false);
 
             await connection.ExecuteAsync(@"
                 CREATE TABLE IF NOT EXISTS executions (
@@ -157,8 +156,7 @@ public sealed class SQLiteExecutionRepository : IExecutionRepository, IDisposabl
 
         await EnsureInitializedAsync(cancellationToken).ConfigureAwait(false);
 
-        await using var connection = CreateConnection();
-        await connection.OpenAsync(cancellationToken).ConfigureAwait(false);
+        await using var connection = await CreateConnectionAsync(cancellationToken).ConfigureAwait(false);
 
         await using var transaction = await connection.BeginTransactionAsync(cancellationToken).ConfigureAwait(false);
 
@@ -226,8 +224,7 @@ public sealed class SQLiteExecutionRepository : IExecutionRepository, IDisposabl
 
         await EnsureInitializedAsync(cancellationToken).ConfigureAwait(false);
 
-        await using var connection = CreateConnection();
-        await connection.OpenAsync(cancellationToken).ConfigureAwait(false);
+        await using var connection = await CreateConnectionAsync(cancellationToken).ConfigureAwait(false);
 
         const string sql = @"
             SELECT 
@@ -256,8 +253,7 @@ public sealed class SQLiteExecutionRepository : IExecutionRepository, IDisposabl
     {
         await EnsureInitializedAsync(cancellationToken).ConfigureAwait(false);
 
-        await using var connection = CreateConnection();
-        await connection.OpenAsync(cancellationToken).ConfigureAwait(false);
+        await using var connection = await CreateConnectionAsync(cancellationToken).ConfigureAwait(false);
 
         const string sql = @"
             SELECT 
@@ -291,8 +287,7 @@ public sealed class SQLiteExecutionRepository : IExecutionRepository, IDisposabl
     {
         await EnsureInitializedAsync(cancellationToken).ConfigureAwait(false);
 
-        await using var connection = CreateConnection();
-        await connection.OpenAsync(cancellationToken).ConfigureAwait(false);
+        await using var connection = await CreateConnectionAsync(cancellationToken).ConfigureAwait(false);
 
         const string sql = @"
             SELECT 
@@ -335,8 +330,7 @@ public sealed class SQLiteExecutionRepository : IExecutionRepository, IDisposabl
 
         await EnsureInitializedAsync(cancellationToken).ConfigureAwait(false);
 
-        await using var connection = CreateConnection();
-        await connection.OpenAsync(cancellationToken).ConfigureAwait(false);
+        await using var connection = await CreateConnectionAsync(cancellationToken).ConfigureAwait(false);
 
         var cutoffDate = DateTimeOffset.UtcNow.AddDays(-olderThanDays).ToString("O");
 
@@ -355,8 +349,7 @@ public sealed class SQLiteExecutionRepository : IExecutionRepository, IDisposabl
 
         await EnsureInitializedAsync(cancellationToken).ConfigureAwait(false);
 
-        await using var connection = CreateConnection();
-        await connection.OpenAsync(cancellationToken).ConfigureAwait(false);
+        await using var connection = await CreateConnectionAsync(cancellationToken).ConfigureAwait(false);
 
         var sql = "DELETE FROM executions WHERE run_id = @RunId";
         var deleted = await connection.ExecuteAsync(sql, new { RunId = runId })
@@ -373,8 +366,7 @@ public sealed class SQLiteExecutionRepository : IExecutionRepository, IDisposabl
     {
         await EnsureInitializedAsync(cancellationToken).ConfigureAwait(false);
 
-        await using var connection = CreateConnection();
-        await connection.OpenAsync(cancellationToken).ConfigureAwait(false);
+        await using var connection = await CreateConnectionAsync(cancellationToken).ConfigureAwait(false);
 
         var sql = @"
             SELECT

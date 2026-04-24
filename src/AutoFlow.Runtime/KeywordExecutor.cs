@@ -1,4 +1,4 @@
-// Этот код нужен для динамического вызова keyword-обработчиков с типизированными аргументами.
+
 using System;
 using System.Collections.Concurrent;
 using System.Text.Json;
@@ -40,9 +40,7 @@ public sealed class KeywordExecutor
         object? rawArgs,
         CancellationToken cancellationToken = default)
     {
-        var registration = _registry.Get(keywordName);
-
-        if (registration is null)
+        if (!_registry.TryGet(keywordName, out var registration))
         {
             var availableKeywords = string.Join(", ", _registry.GetAll().Take(10).Select(k => k.Name));
             var more = _registry.GetAll().Count > 10 ? $" (and {_registry.GetAll().Count - 10} more)" : "";
@@ -99,8 +97,8 @@ public sealed class KeywordExecutor
         Task<KeywordResult> typedTask;
         try
         {
-            var task = method.Invoke(handler, [context, typedArgs, cancellationToken])
-                       ?? throw new InvalidOperationException("ExecuteAsync returned null");
+        var task = method.Invoke(handler, new object[] { context, typedArgs, cancellationToken })
+                   ?? throw new InvalidOperationException("ExecuteAsync returned null");
             
             if (task is not Task<KeywordResult> resultTask)
                 return KeywordResult.Failure(

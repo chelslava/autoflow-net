@@ -889,4 +889,14 @@ rootCommand.AddCommand(cleanCommand);
 rootCommand.AddCommand(newCommand);
 rootCommand.AddCommand(graphCommand);
 
-return await rootCommand.InvokeAsync(args);
+try
+{
+    return await rootCommand.InvokeAsync(args);
+}
+catch (Exception ex)
+{
+    Console.WriteLine($"✗ Unexpected error: {ex.Message}");
+    Console.WriteLine("Please check your workflow file and try again.");
+    Environment.ExitCode = 1;
+    return Environment.ExitCode;
+}
