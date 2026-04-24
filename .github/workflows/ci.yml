@@ -95,8 +95,8 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-nuget-
 
-      - name: Restore
-        run: dotnet restore
+       - name: Restore
+         run: dotnet restore
 
        - name: Build
          run: dotnet build --no-restore --configuration Release
@@ -196,13 +196,13 @@ jobs:
       - name: Restore
         run: dotnet restore
 
-      - name: Build
-        run: dotnet build --no-restore --configuration Release
+       - name: Build
+         run: dotnet build --no-restore --configuration Release
 
-        - name: Install Playwright Chromium
-          run: pwsh tests/AutoFlow.Library.Browser.Tests/bin/Release/net10.0/playwright.ps1 install chromium
+       - name: Install Playwright Chromium
+         run: pwsh tests/AutoFlow.Library.Browser.Tests/bin/Release/net10.0/playwright.ps1 install chromium
 
-      - name: Run browser integration tests
+       - name: Run browser integration tests
         env:
           CI: "1"
         run: dotnet test tests/AutoFlow.Library.Browser.Tests/AutoFlow.Library.Browser.Tests.csproj --configuration Release --filter "Category=Browser" --collect:"XPlat Code Coverage"
