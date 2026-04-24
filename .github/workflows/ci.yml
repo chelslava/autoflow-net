@@ -55,15 +55,15 @@ jobs:
             fi
           done
 
-       - name: Upload coverage
-         uses: actions/upload-artifact@v7
-         with:
-           name: coverage
-           path: |
-             tests/**/TestResults/*/coverage.cobertura.xml
-             !tests/AutoFlow.Scenarios.Tests/**
-             !tests/AutoFlow.Library.Browser.Tests/**
-           retention-days: 7
+      - name: Upload coverage
+        uses: actions/upload-artifact@v7
+        with:
+          name: coverage
+          path: |
+            tests/**/TestResults/*/coverage.cobertura.xml
+            !tests/AutoFlow.Scenarios.Tests/**
+            !tests/AutoFlow.Library.Browser.Tests/**
+          retention-days: 7
 
       - name: Publish Linux-x64
         run: dotnet publish src/AutoFlow.Cli/AutoFlow.Cli.csproj -c Release -o ./publish-linux /p:PublishSingleFile=true /p:SelfContained=true /p:RuntimeIdentifier=linux-x64
@@ -98,8 +98,8 @@ jobs:
       - name: Restore
         run: dotnet restore
 
-      - name: Build
-        run: dotnet build --no-restore --configuration Release
+       - name: Build
+         run: dotnet build --no-restore --configuration Release
 
        - name: Validate example workflows
          run: |
@@ -199,20 +199,20 @@ jobs:
       - name: Build
         run: dotnet build --no-restore --configuration Release
 
-       - name: Install Playwright Chromium
-         run: pwsh tests/AutoFlow.Library.Browser.Tests/bin/Release/net10.0/playwright.ps1 install chromium
+        - name: Install Playwright Chromium
+          run: pwsh tests/AutoFlow.Library.Browser.Tests/bin/Release/net10.0/playwright.ps1 install chromium
 
       - name: Run browser integration tests
         env:
           CI: "1"
         run: dotnet test tests/AutoFlow.Library.Browser.Tests/AutoFlow.Library.Browser.Tests.csproj --configuration Release --filter "Category=Browser" --collect:"XPlat Code Coverage"
 
-       - name: Upload browser coverage
-         uses: actions/upload-artifact@v7
-         with:
-           name: browser-coverage
-           path: tests/AutoFlow.Library.Browser.Tests/**/TestResults/*/coverage.cobertura.xml
-           retention-days: 7
+      - name: Upload browser coverage
+        uses: actions/upload-artifact@v7
+        with:
+          name: browser-coverage
+          path: tests/AutoFlow.Library.Browser.Tests/**/TestResults/*/coverage.cobertura.xml
+          retention-days: 7
 
   # lint:
   #   runs-on: ubuntu-latest
