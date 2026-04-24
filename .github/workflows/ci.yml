@@ -95,43 +95,43 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-nuget-
 
-       - name: Restore
-         run: dotnet restore
+      - name: Restore
+        run: dotnet restore
 
-       - name: Build
-         run: dotnet build --no-restore --configuration Release
+      - name: Build
+        run: dotnet build --no-restore --configuration Release
 
-       - name: Validate example workflows
-         run: |
-           validation_failed=false
-           files=(
-             "examples/flow.yaml"
-             "examples/advanced_flow.yaml"
-             "examples/advanced_features.yaml"
-             "examples/file_roundtrip.yaml"
-             "examples/http_json_report.yaml"
-             "examples/excel_summary.yaml"
-             "examples/imports/main.yaml"
-             "examples/imports_report.yaml"
-             "examples/parallel_fetch_report.yaml"
-             "examples/report_cli_demo.yaml"
-             "examples/browser_login.yaml"
-             "examples/browser_ecommerce.yaml"
-             "examples/rpa_challenge.yaml"
-             "examples/rpa_challenge_reframework.yaml"
-             "examples/reframework/main.yaml"
-           )
-           for file in "${files[@]}"; do
-             echo "Validating $file"
-             if ! dotnet run --project src/AutoFlow.Cli -c Release -- validate "$file"; then
-               validation_failed=true
-               echo "::error::Validation failed for $file"
-             fi
-           done
-           if [ "$validation_failed" = true ]; then
-             echo "::error::One or more workflow validations failed"
-             exit 1
-           fi
+      - name: Validate example workflows
+        run: |
+          validation_failed=false
+          files=(
+            "examples/flow.yaml"
+            "examples/advanced_flow.yaml"
+            "examples/advanced_features.yaml"
+            "examples/file_roundtrip.yaml"
+            "examples/http_json_report.yaml"
+            "examples/excel_summary.yaml"
+            "examples/imports/main.yaml"
+            "examples/imports_report.yaml"
+            "examples/parallel_fetch_report.yaml"
+            "examples/report_cli_demo.yaml"
+            "examples/browser_login.yaml"
+            "examples/browser_ecommerce.yaml"
+            "examples/rpa_challenge.yaml"
+            "examples/rpa_challenge_reframework.yaml"
+            "examples/reframework/main.yaml"
+          )
+          for file in "${files[@]}"; do
+            echo "Validating $file"
+            if ! dotnet run --project src/AutoFlow.Cli -c Release -- validate "$file"; then
+              validation_failed=true
+              echo "::error::Validation failed for $file"
+            fi
+          done
+          if [ "$validation_failed" = true ]; then
+            echo "::error::One or more workflow validations failed"
+            exit 1
+          fi
 
   scenario-tests:
     needs: build-test
@@ -165,12 +165,12 @@ jobs:
           CI: "1"
         run: dotnet test tests/AutoFlow.Scenarios.Tests/AutoFlow.Scenarios.Tests.csproj --no-build --configuration Release --filter "Category=Scenario|Category=ExternalScenario" --collect:"XPlat Code Coverage"
 
-       - name: Upload scenario coverage
-         uses: actions/upload-artifact@v7
-         with:
-           name: scenario-coverage
-           path: tests/AutoFlow.Scenarios.Tests/**/TestResults/*/coverage.cobertura.xml
-           retention-days: 7
+      - name: Upload scenario coverage
+        uses: actions/upload-artifact@v7
+        with:
+          name: scenario-coverage
+          path: tests/AutoFlow.Scenarios.Tests/**/TestResults/*/coverage.cobertura.xml
+          retention-days: 7
 
   browser-tests:
     needs: build-test
@@ -196,13 +196,13 @@ jobs:
       - name: Restore
         run: dotnet restore
 
-       - name: Build
-         run: dotnet build --no-restore --configuration Release
+      - name: Build
+        run: dotnet build --no-restore --configuration Release
 
-       - name: Install Playwright Chromium
-         run: pwsh tests/AutoFlow.Library.Browser.Tests/bin/Release/net10.0/playwright.ps1 install chromium
+      - name: Install Playwright Chromium
+        run: pwsh tests/AutoFlow.Library.Browser.Tests/bin/Release/net10.0/playwright.ps1 install chromium
 
-       - name: Run browser integration tests
+      - name: Run browser integration tests
         env:
           CI: "1"
         run: dotnet test tests/AutoFlow.Library.Browser.Tests/AutoFlow.Library.Browser.Tests.csproj --configuration Release --filter "Category=Browser" --collect:"XPlat Code Coverage"
