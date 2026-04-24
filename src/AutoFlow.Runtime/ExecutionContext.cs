@@ -8,8 +8,8 @@ namespace AutoFlow.Runtime;
 public sealed class ExecutionContext : IExecutionContext
 {
     private readonly Dictionary<string, object?> _variables;
-    private readonly Dictionary<string, object?> _stepResults;
-    private readonly Dictionary<string, object?> _runtimeState;
+    private Dictionary<string, object?> _stepResults;
+    private Dictionary<string, object?> _runtimeState;
 
     public ExecutionContext(IServiceProvider services, Dictionary<string, object?>? variables = null)
     {
@@ -95,10 +95,11 @@ public sealed class ExecutionContext : IExecutionContext
 
     public ExecutionContext Clone()
     {
-        return new ExecutionContext(Services, new Dictionary<string, object?>(_variables))
+        var clone = new ExecutionContext(Services, new Dictionary<string, object?>(_variables))
         {
             _stepResults = new Dictionary<string, object?>(_stepResults),
             _runtimeState = new Dictionary<string, object?>(_runtimeState)
         };
+        return clone;
     }
 }

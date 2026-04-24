@@ -111,6 +111,80 @@ public sealed class HttpRequestKeyword : IKeywordHandler<HttpRequestArgs>
             "HTTP {Method} {Url}",
             method, maskedUrl);
 
+        using var cts = args.TimeoutMs.HasValue
+            ? new CancellationTokenSource(args.TimeoutMs.Value)
+            : null;
+
+        using var linkedCts = cts is not null
+            ? CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, cts.Token)
+            : null;
+
+        var effectiveToken = linkedCts?.Token ?? cancellationToken;
+
+        HttpResponseMessage response;
+        try
+        {
+            response = await _httpClient.SendAsync(request, effectiveToken).ConfigureAwait(false);
+        }
+        catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException)
+        {
+            if (args.EnableCircuitBreaker)
+            {
+                _circuitBreaker.RecordFailure(host);
+            }
+            throw;
+        }
+
+        var maxResponseSize = args.MaxResponseSizeBytes ?? DefaultMaxResponseSize;
+        string responseBody;
+        
+        var contentLength = response.Content.Headers.ContentLength;
+        if (contentLength.HasValue && contentLength.Value > maxResponseSize)
+        {
+            responseBody = $"[Response too large: {contentLength.Value:N0} bytes > {maxResponseSize:N0} byte limit]";
+        }
+        else
+        {
+            using var stream = await response.Content.ReadAsStreamAsync(effectiveToken).ConfigureAwait(false);
+            using var limitedStream = new LimitedStream(stream, maxResponseSize);
+            using var reader = new StreamReader(limitedStream, Encoding.UTF8);
+            responseBody = await reader.ReadToEndAsync(effectiveToken).ConfigureAwait(false);
+        }
+
+        var savedToFile = string.Empty;
+        if (!string.IsNullOrWhiteSpace(args.SaveToFile))
+        {
+            var (outputPathValid, fullPath, outputPathError) = ValidateOutputPath(args.SaveToFile);
+            if (!outputPathValid)
+            {
+                context.Logger.LogWarning("Output path validation failed: {Error}", outputPathError);
+                return KeywordResult.Failure(outputPathError!);
+            }
+
+            try
+            {
+                await File.WriteAllTextAsync(fullPath!, responseBody, effectiveToken).ConfigureAwait(false);
+                savedToFile = fullPath;
+            }
+            catch (Exception ex)
+            {
+                context.Logger.LogError(ex, "Failed to save response to {Path}", fullPath);
+                return KeywordResult.Failure($"Failed to save response to '{fullPath}': {ex.Message}");
+            }
+        }
+
+        if (args.EnableCircuitBreaker)
+        {
+            if (response.IsSuccessStatusCode)
+            {
+                _circuitBreaker.RecordSuccess(host);
+            }
+            else
+            {
+                _circuitBreaker.RecordFailure(host);
+            }
+        }
+
         var result = new
         {
             statusCode = (int)response.StatusCode,

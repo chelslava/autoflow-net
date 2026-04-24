@@ -551,14 +551,14 @@ public sealed class RuntimeEngine : IRuntimeEngine
 
         using var semaphore = new SemaphoreSlim(parallel.MaxConcurrency);
         var exceptions = new ConcurrentBag<Exception>();
-        var failedFlag = 0;
+        var failedFlag = 0L;
 
         var tasks = parallel.Steps.Select(async node =>
         {
             await semaphore.WaitAsync(cancellationToken).ConfigureAwait(false);
             try
             {
-                if (parallel.ErrorMode == ParallelErrorMode.FailFast && Interlocked.Read(ref failedFlag) == 1)
+                if (parallel.ErrorMode == ParallelErrorMode.FailFast && Interlocked.Read(ref failedFlag) == 1L)
                     return;
 
                 var taskContext = context.Clone();
@@ -589,7 +589,7 @@ public sealed class RuntimeEngine : IRuntimeEngine
 
         if (exceptions.Count > 0)
         {
-            if (parallel.ErrorMode == ParallelErrorMode.FailFast || Interlocked.Read(ref failedFlag) == 1)
+            if (parallel.ErrorMode == ParallelErrorMode.FailFast || Interlocked.Read(ref failedFlag) == 1L)
             {
                 throw new AggregateException("Ошибки в параллельном блоке", exceptions);
             }

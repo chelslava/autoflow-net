@@ -29,7 +29,7 @@ tasks:
           uses: browser.open
           with:
             browser: chromium
-            headless: false
+            headless: true
             width: 1280
             height: 720
           save_as:
