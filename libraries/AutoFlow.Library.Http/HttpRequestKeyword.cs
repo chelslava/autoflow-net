@@ -44,11 +44,13 @@ public sealed class HttpRequestKeyword : IKeywordHandler<HttpRequestArgs>
     
     private readonly HttpClient _httpClient;
     private readonly CircuitBreaker _circuitBreaker;
+    private readonly SecretMasker _secretMasker;
 
-    public HttpRequestKeyword(HttpClient httpClient, CircuitBreaker circuitBreaker)
+    public HttpRequestKeyword(HttpClient httpClient, CircuitBreaker circuitBreaker, SecretMasker? secretMasker = null)
     {
         _httpClient = httpClient;
         _circuitBreaker = circuitBreaker;
+        _secretMasker = secretMasker ?? new SecretMasker();
     }
 
     public async Task<KeywordResult> ExecuteAsync(
@@ -104,85 +106,10 @@ public sealed class HttpRequestKeyword : IKeywordHandler<HttpRequestArgs>
             request.Content = new StringContent(json, Encoding.UTF8, "application/json");
         }
 
+        var maskedUrl = _secretMasker.Mask(url);
         context.Logger.LogInformation(
             "HTTP {Method} {Url}",
-            method, url);
-
-        using var cts = args.TimeoutMs.HasValue
-            ? new CancellationTokenSource(args.TimeoutMs.Value)
-            : null;
-
-        using var linkedCts = cts is not null
-            ? CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, cts.Token)
-            : null;
-
-        var effectiveToken = linkedCts?.Token ?? cancellationToken;
-
-        HttpResponseMessage response;
-        try
-        {
-            response = await _httpClient.SendAsync(request, effectiveToken).ConfigureAwait(false);
-        }
-        catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException)
-        {
-            if (args.EnableCircuitBreaker)
-            {
-                _circuitBreaker.RecordFailure(host);
-            }
-            throw;
-        }
-
-        var maxResponseSize = args.MaxResponseSizeBytes ?? DefaultMaxResponseSize;
-        string responseBody;
-        byte[]? responseBytes = null;
-        
-        var contentLength = response.Content.Headers.ContentLength;
-        if (contentLength.HasValue && contentLength.Value > maxResponseSize)
-        {
-            responseBody = $"[Response too large: {contentLength.Value:N0} bytes > {maxResponseSize:N0} byte limit]";
-        }
-        else
-        {
-            using var stream = await response.Content.ReadAsStreamAsync(effectiveToken).ConfigureAwait(false);
-            using var limitedStream = new LimitedStream(stream, maxResponseSize);
-            using var buffer = new MemoryStream();
-            await limitedStream.CopyToAsync(buffer, effectiveToken).ConfigureAwait(false);
-            responseBytes = buffer.ToArray();
-            responseBody = Encoding.UTF8.GetString(responseBytes);
-        }
-
-        string? savedToFile = null;
-        if (response.IsSuccessStatusCode && !string.IsNullOrWhiteSpace(args.SaveToFile) && responseBytes is not null)
-        {
-            var (isValidPath, fullPath, pathError) = ValidateOutputPath(args.SaveToFile);
-            if (!isValidPath || fullPath is null)
-            {
-                context.Logger.LogWarning("SaveToFile validation failed: {Error}", pathError);
-                return KeywordResult.Failure(pathError ?? "Invalid saveToFile path.");
-            }
-
-            var directory = Path.GetDirectoryName(fullPath);
-            if (!string.IsNullOrWhiteSpace(directory))
-            {
-                Directory.CreateDirectory(directory);
-            }
-
-            await File.WriteAllBytesAsync(fullPath, responseBytes, effectiveToken).ConfigureAwait(false);
-            savedToFile = args.SaveToFile;
-            responseBody = $"[saved to {args.SaveToFile}]";
-        }
-
-        if (args.EnableCircuitBreaker)
-        {
-            if (response.IsSuccessStatusCode)
-            {
-                _circuitBreaker.RecordSuccess(host);
-            }
-            else if ((int)response.StatusCode >= 500)
-            {
-                _circuitBreaker.RecordFailure(host);
-            }
-        }
+            method, maskedUrl);
 
         var result = new
         {
@@ -194,13 +121,14 @@ public sealed class HttpRequestKeyword : IKeywordHandler<HttpRequestArgs>
             isSuccess = response.IsSuccessStatusCode
         };
 
+        var maskedUrlForLogs = _secretMasker.Mask(url);
         context.Logger.LogInformation(
             "HTTP {Method} {Url} -> {StatusCode}",
-            method, url, (int)response.StatusCode);
+            method, maskedUrlForLogs, (int)response.StatusCode);
 
         var logs = new List<string>
         {
-            $"{method} {url}",
+            $"{method} {maskedUrlForLogs}",
             $"Status: {(int)response.StatusCode} {response.StatusCode}"
         };
 

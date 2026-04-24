@@ -551,14 +551,14 @@ public sealed class RuntimeEngine : IRuntimeEngine
 
         using var semaphore = new SemaphoreSlim(parallel.MaxConcurrency);
         var exceptions = new ConcurrentBag<Exception>();
-        var failed = false;
+        var failedFlag = 0;
 
         var tasks = parallel.Steps.Select(async node =>
         {
             await semaphore.WaitAsync(cancellationToken).ConfigureAwait(false);
             try
             {
-                if (parallel.ErrorMode == ParallelErrorMode.FailFast && failed)
+                if (parallel.ErrorMode == ParallelErrorMode.FailFast && Interlocked.Read(ref failedFlag) == 1)
                     return;
 
                 await ExecuteNode(node, document, context, runResult, workflowContext, cancellationToken).ConfigureAwait(false);
@@ -573,7 +573,7 @@ public sealed class RuntimeEngine : IRuntimeEngine
                     CannotUnloadAppDomainException))
             {
                 exceptions.Add(ex);
-                failed = true;
+                Interlocked.Exchange(ref failedFlag, 1);
             }
             finally
             {
@@ -585,7 +585,7 @@ public sealed class RuntimeEngine : IRuntimeEngine
 
         if (exceptions.Count > 0)
         {
-            if (parallel.ErrorMode == ParallelErrorMode.FailFast)
+            if (parallel.ErrorMode == ParallelErrorMode.FailFast || Interlocked.Read(ref failedFlag) == 1)
             {
                 throw new AggregateException("Ошибки в параллельном блоке", exceptions);
             }
