@@ -157,8 +157,8 @@ jobs:
       - name: Restore
         run: dotnet restore
 
-      - name: Build
-        run: dotnet build --no-restore --configuration Release
+       - name: Build
+         run: dotnet build --no-restore --configuration Release
 
        - name: Run scenario tests
          env:
