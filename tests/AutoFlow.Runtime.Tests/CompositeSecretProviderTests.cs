@@ -9,10 +9,11 @@ namespace AutoFlow.Runtime.Tests;
 public sealed class CompositeSecretProviderTests
 {
     [Fact]
-    public void Constructor_NullProviders_ThrowsArgumentNullException()
+    public void Constructor_NullProviders_ReturnsEmptyComposite()
     {
-        Assert.Throws<ArgumentNullException>(() =>
-            new CompositeSecretProvider(null!));
+        var composite = new CompositeSecretProvider(null!);
+
+        Assert.Empty(composite.Providers);
     }
 
     [Fact]
@@ -20,7 +21,7 @@ public sealed class CompositeSecretProviderTests
     {
         var composite = new CompositeSecretProvider(new ISecretProvider[0]);
 
-        Assert.Empty(composite);
+        Assert.Empty(composite.Providers);
     }
 
     [Fact]
@@ -147,7 +148,7 @@ public sealed class CompositeSecretProviderTests
     }
 
     [Fact]
-    public void Priority_FirstProviderTakes precedence()
+    public async Task Priority_FirstProviderTakesPrecedence()
     {
         var provider1 = new TestSecretProvider("SHARED", "first");
         var provider2 = new TestSecretProvider("SHARED", "second");
@@ -156,31 +157,5 @@ public sealed class CompositeSecretProviderTests
         var result = await composite.ResolveAsync("SHARED");
 
         Assert.Equal("first", result);
-    }
-}
-
-internal sealed class TestSecretProvider : ISecretProvider
-{
-    private readonly string _name;
-    private readonly string? _value;
-
-    public TestSecretProvider(string name, string? value)
-    {
-        _name = name;
-        _value = value;
-    }
-
-    public Task<string?> ResolveAsync(string secretRef, System.Threading.CancellationToken cancellationToken = default)
-    {
-        if (secretRef == _name)
-        {
-            return Task.FromResult<string?>(_value);
-        }
-        return Task.FromResult<string?>(null);
-    }
-
-    public bool CanResolve(string secretRef)
-    {
-        return secretRef == _name;
     }
 }

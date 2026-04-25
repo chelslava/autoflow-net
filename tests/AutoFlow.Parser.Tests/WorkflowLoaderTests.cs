@@ -3,7 +3,6 @@ using System.IO;
 using System.Threading.Tasks;
 using AutoFlow.Abstractions;
 using AutoFlow.Parser;
-using AutoFlow.Validation;
 using Xunit;
 
 namespace AutoFlow.Parser.Tests;
@@ -133,7 +132,10 @@ tasks:
         var mainFile = Path.Combine(baseDir, $"main_{Guid.NewGuid()}.yaml");
         var importFile = Path.Combine(baseDir, $"imported_{Guid.NewGuid()}.yaml");
 
-        var importYaml = @"
+        var importYaml = $@"
+schema_version: 1
+name: imported_workflow
+
 tasks:
   imported_task:
     steps:
@@ -307,7 +309,10 @@ tasks:
         var baseDir = Path.GetTempPath();
         var importFile = Path.Combine(baseDir, $"imported_{Guid.NewGuid()}.yaml");
 
-        var importYaml = @"
+        var importYaml = $@"
+schema_version: 1
+name: imported_workflow
+
 tasks:
   imported_task:
     steps:
@@ -332,13 +337,14 @@ tasks:
 
         try
         {
-        await File.WriteAllTextAsync(importFile, importYaml);
+            var importFullPath = Path.Combine(baseDir, Path.GetFileName(importFile));
+            await File.WriteAllTextAsync(importFile, importYaml);
 
-        var document = _loader.LoadFromString(mainYaml, baseDir);
+            var document = _loader.LoadFromString(mainYaml, baseDir);
 
-        Assert.Equal(2, document.Tasks.Count);
-        Assert.Contains("main", document.Tasks.Keys);
-        Assert.Contains("imported_task", document.Tasks.Keys);
+            Assert.Equal(2, document.Tasks.Count);
+            Assert.Contains("main", document.Tasks.Keys);
+            Assert.Contains("imported_task", document.Tasks.Keys);
         }
         finally
         {

@@ -96,7 +96,19 @@ public sealed class HttpRequestKeywordTests
         try
         {
             Directory.SetCurrentDirectory(tempRoot);
-            SetupHttpResponse(HttpStatusCode.OK, "file-content");
+            _messageHandlerMock
+                .Protected()
+                .Setup<Task<HttpResponseMessage>>(
+                    "SendAsync",
+                    ItExpr.IsAny<HttpRequestMessage>(),
+                    ItExpr.IsAny<CancellationToken>())
+                .ReturnsAsync((HttpRequestMessage request, CancellationToken ct) =>
+                {
+                    return new HttpResponseMessage(HttpStatusCode.OK)
+                    {
+                        Content = new StringContent("file-content", System.Text.Encoding.UTF8, "text/plain")
+                    };
+                });
 
             var keyword = new HttpRequestKeyword(_httpClient, _circuitBreaker);
             var args = new HttpRequestArgs
@@ -108,9 +120,11 @@ public sealed class HttpRequestKeywordTests
 
             var result = await keyword.ExecuteAsync(CreateContext(), args);
 
-            Assert.True(result.IsSuccess);
+            Console.WriteLine($"Result IsSuccess: {result.IsSuccess}");
+            Console.WriteLine($"Result Error: {result.ErrorMessage}");
+            Assert.True(result.IsSuccess, $"Result is not success. Error: {result.ErrorMessage}");
             var resultPath = Path.Join(tempRoot, "downloads", "result.txt");
-            Assert.True(File.Exists(resultPath));
+            Assert.True(File.Exists(resultPath), $"File not found: {resultPath}");
             Assert.Equal("file-content", await File.ReadAllTextAsync(resultPath));
         }
         finally

@@ -151,26 +151,31 @@ public sealed class HttpRequestKeyword : IKeywordHandler<HttpRequestArgs>
             responseBody = await reader.ReadToEndAsync(effectiveToken).ConfigureAwait(false);
         }
 
-        var savedToFile = string.Empty;
-        if (!string.IsNullOrWhiteSpace(args.SaveToFile))
-        {
-            var (outputPathValid, fullPath, outputPathError) = ValidateOutputPath(args.SaveToFile);
-            if (!outputPathValid)
-            {
-                context.Logger.LogWarning("Output path validation failed: {Error}", outputPathError);
-                return KeywordResult.Failure(outputPathError!);
-            }
+         var savedToFile = string.Empty;
+         if (!string.IsNullOrWhiteSpace(args.SaveToFile))
+         {
+             var (outputPathValid, fullPath, outputPathError) = ValidateOutputPath(args.SaveToFile);
+             if (!outputPathValid)
+             {
+                 context.Logger.LogWarning("Output path validation failed: {Error}", outputPathError);
+                 return KeywordResult.Failure(outputPathError!);
+             }
 
-            try
-            {
-                await File.WriteAllTextAsync(fullPath!, responseBody, effectiveToken).ConfigureAwait(false);
-                savedToFile = fullPath;
-            }
-            catch (Exception ex)
-            {
-                context.Logger.LogError(ex, "Failed to save response to {Path}", fullPath);
-                return KeywordResult.Failure($"Failed to save response to '{fullPath}': {ex.Message}");
-            }
+             try
+             {
+                 var directory = Path.GetDirectoryName(fullPath!);
+                 if (!string.IsNullOrEmpty(directory) && !Directory.Exists(directory))
+                 {
+                     Directory.CreateDirectory(directory);
+                 }
+                 await File.WriteAllTextAsync(fullPath!, responseBody, effectiveToken).ConfigureAwait(false);
+                 savedToFile = fullPath;
+             }
+             catch (Exception ex)
+             {
+                 context.Logger.LogError(ex, "Failed to save response to {Path}", fullPath);
+                 return KeywordResult.Failure($"Failed to save response to '{fullPath}': {ex.Message}");
+             }
         }
 
         if (args.EnableCircuitBreaker)

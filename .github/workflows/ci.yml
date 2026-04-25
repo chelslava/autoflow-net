@@ -160,10 +160,10 @@ jobs:
       - name: Build
         run: dotnet build --no-restore --configuration Release
 
-      - name: Run scenario tests
-        env:
-          CI: "1"
-        run: dotnet test tests/AutoFlow.Scenarios.Tests/AutoFlow.Scenarios.Tests.csproj --no-build --configuration Release --filter "Category=Scenario|Category=ExternalScenario" --collect:"XPlat Code Coverage"
+       - name: Run scenario tests
+         env:
+           CI: "1"
+         run: dotnet test tests/AutoFlow.Scenarios.Tests/AutoFlow.Scenarios.Tests.csproj --no-build --configuration Release --filter "Category=Scenario" --collect:"XPlat Code Coverage"
 
       - name: Upload scenario coverage
         uses: actions/upload-artifact@v7

@@ -46,6 +46,7 @@ public sealed class WorkflowLoader
             return document;
 
         _loadedFiles.Clear();
+        _rootDirectory = Path.GetFullPath(basePath);
         return MergeWithImports(document, basePath);
     }
 
@@ -103,6 +104,9 @@ public sealed class WorkflowLoader
         // 
         // БЕЗОПАСНОСТЬ: Абсолютные пути и path traversal (../) запрещены для защиты от
         // несанкционированного чтения файлов за пределами рабочей директории.
+
+        if (string.IsNullOrWhiteSpace(importPath))
+            throw new InvalidOperationException($"Import path cannot be empty or whitespace.");
 
         // Reject absolute paths
         if (Path.IsPathRooted(importPath))

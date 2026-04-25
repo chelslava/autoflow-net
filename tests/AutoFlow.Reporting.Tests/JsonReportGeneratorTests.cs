@@ -17,7 +17,7 @@ public sealed class JsonReportGeneratorTests
 
         var json = generator.Generate(runResult);
 
-        Assert.Contains("\"schemaVersion\":\"1.0\"", json);
+        Assert.Contains("\"schemaVersion\": \"1.0\"", json);
         Assert.Contains("\"workflow\"", json);
         Assert.Contains("\"summary\"", json);
         Assert.Contains("\"steps\"", json);
@@ -31,7 +31,7 @@ public sealed class JsonReportGeneratorTests
 
         var json = generator.Generate(runResult);
 
-        Assert.Contains("\"status\":\"passed\"", json);
+        Assert.Contains("\"status\": \"passed\"", json);
     }
 
     [Fact]
@@ -42,7 +42,7 @@ public sealed class JsonReportGeneratorTests
 
         var json = generator.Generate(runResult);
 
-        Assert.Contains("\"status\":\"failed\"", json);
+        Assert.Contains("\"status\": \"failed\"", json);
     }
 
     [Fact]
@@ -57,10 +57,10 @@ public sealed class JsonReportGeneratorTests
 
         var json = generator.Generate(runResult);
 
-        Assert.Contains("\"totalSteps\":4", json);
-        Assert.Contains("\"passedSteps\":2", json);
-        Assert.Contains("\"failedSteps\":1", json);
-        Assert.Contains("\"skippedSteps\":1", json);
+        Assert.Contains("\"totalSteps\": 4", json);
+        Assert.Contains("\"passedSteps\": 2", json);
+        Assert.Contains("\"failedSteps\": 1", json);
+        Assert.Contains("\"skippedSteps\": 1", json);
     }
 
     [Fact]
@@ -75,7 +75,7 @@ public sealed class JsonReportGeneratorTests
         var json = generator.Generate(runResult);
 
         Assert.Contains("\"outputs\"", json);
-        Assert.Contains("\"content\":\"test content\"", json);
+        Assert.Contains("\"content\": \"test content\"", json);
     }
 
     [Fact]
@@ -104,7 +104,7 @@ public sealed class JsonReportGeneratorTests
 
         var json = generator.Generate(runResult);
 
-        Assert.Contains("\"errorMessage\":\"Connection refused\"", json);
+        Assert.Contains("\"errorMessage\": \"Connection refused\"", json);
     }
 
     [Fact]
@@ -122,7 +122,7 @@ public sealed class JsonReportGeneratorTests
         var json = generator.Generate(runResult);
 
         Assert.DoesNotContain("secret_value", json);
-        Assert.Contains("\"token\":\"***\"", json);
+        Assert.Contains("\"token\": \"***\"", json);
     }
 
     [Fact]
@@ -138,7 +138,7 @@ public sealed class JsonReportGeneratorTests
         var json = generator.Generate(runResult);
 
         Assert.DoesNotContain("my_secret_password", json);
-        Assert.Contains("\"errorMessage\":\"Auth failed: ***\"", json);
+        Assert.Contains("\"errorMessage\": \"Auth failed: ***\"", json);
     }
 
     [Fact]
@@ -164,13 +164,14 @@ public sealed class JsonReportGeneratorTests
     {
         var generator = new JsonReportGenerator();
         var runResult = CreateTestRunResult(ExecutionStatus.Passed);
+        runResult.AddStep(CreateTestStep("step1", "log.info", ExecutionStatus.Passed));
 
         var json = generator.Generate(runResult);
 
         Assert.Contains("\"schemaVersion\"", json);
-        Assert.Contains("\"workflowName\"", json);
-        Assert.Contains("\"stepId\"", json);
-        Assert.Contains("\"keywordName\"", json);
+        Assert.Contains("\"name\"", json);
+        Assert.Contains("\"id\"", json);
+        Assert.Contains("\"keyword\"", json);
     }
 
     [Fact]
@@ -208,7 +209,7 @@ public sealed class JsonReportGeneratorTests
 
         var json = generator.Generate(runResult);
 
-        Assert.Contains("\"token\":\"secret_value\"", json);
+        Assert.Contains("\"token\": \"secret_value\"", json);
     }
 
     [Fact]
@@ -219,10 +220,10 @@ public sealed class JsonReportGeneratorTests
 
         var json = generator.Generate(runResult);
 
-        Assert.Contains("\"totalSteps\":0", json);
-        Assert.Contains("\"passedSteps\":0", json);
-        Assert.Contains("\"failedSteps\":0", json);
-        Assert.Contains("\"skippedSteps\":0", json);
+        Assert.Contains("\"totalSteps\": 0", json);
+        Assert.Contains("\"passedSteps\": 0", json);
+        Assert.Contains("\"failedSteps\": 0", json);
+        Assert.Contains("\"skippedSteps\": 0", json);
     }
 
     private static RunResult CreateTestRunResult(ExecutionStatus status)

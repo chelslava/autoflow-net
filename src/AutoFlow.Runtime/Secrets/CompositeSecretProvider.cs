@@ -48,4 +48,7 @@ public sealed class CompositeSecretProvider : ISecretProvider
     {
         _providers.Add(provider ?? throw new ArgumentNullException(nameof(provider)));
     }
+
+    public int Count => _providers.Count;
+    public IReadOnlyList<ISecretProvider> Providers => _providers;
 }

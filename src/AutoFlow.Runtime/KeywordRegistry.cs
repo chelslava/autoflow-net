@@ -32,10 +32,7 @@ public sealed class KeywordRegistry : IKeywordMetadataProvider
 
     public bool TryGet(string name, out KeywordRegistration registration)
     {
-#pragma warning disable CS8601
-        _registrations.TryGetValue(name, out registration);
-#pragma warning restore CS8601
-        return true;
+        return _registrations.TryGetValue(name, out registration!) && registration != null;
     }
 
     public IReadOnlyCollection<KeywordRegistration> GetAll() =>
