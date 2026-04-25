@@ -75,7 +75,7 @@ tasks:
 
 ```bash
 # Скачай из релизов и установи
-code --install-extension autoflow-1.0.0.vsix
+code --install-extension autoflow-1.1.0.vsix
 ```
 
 См. [vscode-autoflow/README.md](vscode-autoflow/README.md) для полной документации.

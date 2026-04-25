@@ -8,6 +8,7 @@
   <img src="https://img.shields.io/badge/Playwright-Browser-2EAD33?style=for-the-badge&logo=playwright" alt="Playwright">
   <img src="https://img.shields.io/badge/VS_Code-Extension-007ACC?style=for-the-badge&logo=visual-studio-code" alt="VS Code Extension">
   <img src="https://img.shields.io/badge/License-MIT-green?style=for-the-badge" alt="MIT License">
+  <img src="https://img.shields.io/badge/Release-v1.1.0-green?style=for-the-badge" alt="Release v1.1.0">
 </p>
 
 <h1 align="center">⚡ AutoFlow.NET</h1>

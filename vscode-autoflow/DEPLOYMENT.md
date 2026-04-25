@@ -288,13 +288,13 @@ npm run compile
 npm run package
 
 # Install locally for testing
-code --install-extension autoflow-1.0.0.vsix
+code --install-extension autoflow-1.1.0.vsix
 
 # Publish to marketplace
 npx @vscode/vsce publish
 
 # Unpublish (if needed)
-npx @vscode/vsce unpublish autoflow@1.0.0
+npx @vscode/vsce unpublish autoflow@1.1.0
 ```
 
 ---
